@@ -1,0 +1,320 @@
+-- =====================================================================
+-- Bumi Baik — seed.sql
+-- Letakkan di: supabase/seed.sql  (dijalankan setelah migrasi 0001–0003)
+--
+-- CATATAN PENTING
+-- 1. Semua angka dampak (co2e_avoided_kg, plastic_avoided_g) adalah
+--    ESTIMASI ILUSTRATIF untuk MVP. Ganti dengan sumber yang dapat
+--    dirujuk sebelum rilis publik dan jelaskan di halaman /dampak.
+-- 2. URL gambar memakai placeholder YOUR_PROJECT_REF. Cari-ganti dengan
+--    project ref Supabase Anda, lalu unggah foto ke bucket
+--    "product-images" dengan nama: <slug>/1.jpg dan <slug>/2.jpg
+-- 3. Aman dijalankan ulang (upsert berdasarkan slug).
+-- 4. Dua produk sengaja diberi stok rendah/habis untuk menguji UI:
+--    pemanas-air-surya-portabel-20l (stok 4) dan
+--    dompet-kulit-nanas (stok 0). Ubah sebelum rilis.
+-- =====================================================================
+
+-- ---------- Kategori ----------
+insert into categories (slug, name) values
+  ('energi-surya',        'Energi Surya'),
+  ('dapur-bebas-plastik', 'Dapur Bebas Plastik'),
+  ('perawatan-diri',      'Perawatan Diri'),
+  ('fesyen-sirkular',     'Fesyen Sirkular'),
+  ('berkebun',            'Berkebun')
+on conflict (slug) do update set name = excluded.name;
+
+-- ---------- Produk ----------
+insert into products
+  (slug, name, description, category_id, price_idr, stock,
+   co2e_avoided_kg, plastic_avoided_g, impact_note, sdg_goals,
+   specs, images, is_featured, weight_g)
+values
+
+-- ===== ENERGI SURYA =====
+('lampu-taman-surya-set-4',
+ 'Lampu Taman Tenaga Surya (set 4)',
+ 'Empat lampu taman yang mengisi daya sendiri dari matahari dan menyala otomatis saat gelap. Tidak perlu kabel, colokan, atau listrik rumah. Rumah lampu dari aluminium anodized yang tahan karat, jadi cocok untuk halaman, teras, atau pagar yang terkena hujan. Baterai bisa diganti, sehingga lampu tidak langsung menjadi sampah ketika baterai melemah. Pasang dengan menancapkan tiangnya ke tanah, tanpa perkakas apa pun.',
+ (select id from categories where slug='energi-surya'),
+ 189000, 45, 12.00, 0,
+ 'Menggantikan sekitar 100 kWh listrik jaringan selama 5 tahun pemakaian (asumsi 0,85 kg CO2e per kWh, 6 jam menyala per malam).',
+ '{7,13}',
+ '[{"label":"Isi paket","value":"4 lampu + 4 tiang"},{"label":"Daya panel","value":"0,5 W per lampu"},{"label":"Waktu menyala","value":"6–8 jam setelah pengisian penuh"},{"label":"Ketahanan","value":"IP65, tahan hujan"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/lampu-taman-surya-set-4/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/lampu-taman-surya-set-4/2.jpg'],
+ true, 900),
+
+('power-bank-surya-20000',
+ 'Power Bank Surya 20.000 mAh',
+ 'Power bank berkapasitas 20.000 mAh dengan panel surya di permukaannya sebagai pengisi tambahan. Panel ini lambat, jadi gunakan sebagai cadangan saat bepergian atau di tempat tanpa listrik, bukan sebagai pengganti pengisian lewat kabel. Punya dua port USB dan satu USB-C, serta senter LED untuk keadaan darurat. Casing berbahan plastik daur ulang. Cocok untuk pendaki, pengendara motor jarak jauh, dan persiapan mati listrik.',
+ (select id from categories where slug='energi-surya'),
+ 249000, 60, 6.50, 0,
+ 'Estimasi pengisian ulang dari matahari 30% dari total siklus selama 3 tahun pemakaian.',
+ '{7,13}',
+ '[{"label":"Kapasitas","value":"20.000 mAh"},{"label":"Port","value":"2 x USB-A, 1 x USB-C"},{"label":"Panel surya","value":"Pengisi tambahan (lambat)"},{"label":"Bahan casing","value":"ABS daur ulang"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/power-bank-surya-20000/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/power-bank-surya-20000/2.jpg'],
+ true, 450),
+
+('pengisi-daya-surya-lipat-21w',
+ 'Pengisi Daya Surya Lipat 21W',
+ 'Panel surya lipat tiga dengan daya 21 watt yang bisa mengisi ponsel, tablet, atau power bank langsung dari sinar matahari. Dilipat seukuran buku tulis dan dilengkapi kait untuk digantung di tas atau tenda. Dua port USB mengatur arus secara otomatis agar perangkat tidak terlalu panas. Di cuaca cerah, ponsel bisa terisi penuh dalam sekitar dua jam. Kain luarnya tahan percikan air dan mudah dilap.',
+ (select id from categories where slug='energi-surya'),
+ 459000, 25, 14.00, 0,
+ 'Menghasilkan sekitar 16 kWh per tahun pada pemakaian rutin 2 jam sehari, setara listrik jaringan yang dipakai untuk mengisi ponsel setiap hari selama beberapa tahun.',
+ '{7,13}',
+ '[{"label":"Daya","value":"21 W"},{"label":"Port","value":"2 x USB-A"},{"label":"Ukuran terlipat","value":"26 x 15 x 4 cm"},{"label":"Berat","value":"±600 g"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pengisi-daya-surya-lipat-21w/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pengisi-daya-surya-lipat-21w/2.jpg'],
+ false, 650),
+
+('lampu-belajar-surya-isi-ulang',
+ 'Lampu Belajar Surya Isi Ulang',
+ 'Lampu meja berpanel surya terpisah yang bisa diletakkan di dekat jendela atau jemuran sementara lampunya dipakai di dalam ruangan. Tiga tingkat kecerahan dan cahaya hangat yang tidak menyilaukan mata. Baterai lithium bisa dicas lewat panel atau USB. Berguna untuk anak belajar di daerah dengan pasokan listrik tidak stabil, dan menjadi cadangan saat listrik padam. Kabel panelnya sepanjang 3 meter.',
+ (select id from categories where slug='energi-surya'),
+ 135000, 50, 4.00, 0,
+ 'Menggantikan lampu minyak atau pemakaian listrik sekitar 40 kWh selama 3 tahun pemakaian.',
+ '{7}',
+ '[{"label":"Tingkat cahaya","value":"3 level, 3000 K"},{"label":"Baterai","value":"Lithium 2.000 mAh"},{"label":"Panjang kabel panel","value":"3 m"},{"label":"Waktu menyala","value":"Hingga 10 jam"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/lampu-belajar-surya-isi-ulang/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/lampu-belajar-surya-isi-ulang/2.jpg'],
+ false, 500),
+
+('pemanas-air-surya-portabel-20l',
+ 'Pemanas Air Surya Portabel 20L',
+ 'Kantong air hitam berkapasitas 20 liter yang memanaskan air hanya dari sinar matahari. Letakkan di bawah terik selama 3–4 jam, lalu air siap dipakai mandi atau mencuci. Dilengkapi selang dan kepala pancuran sehingga bisa digantung di pohon atau dinding. Cocok untuk berkemah, kebun, atau rumah yang tidak punya pemanas air. Bahan PVC berlapis ganda dan bebas ftalat.',
+ (select id from categories where slug='energi-surya'),
+ 389000, 4, 18.00, 0,
+ 'Menggantikan pemanas listrik atau gas untuk sekitar 200 kali mandi per tahun.',
+ '{7,13}',
+ '[{"label":"Kapasitas","value":"20 liter"},{"label":"Suhu maksimum","value":"Hingga 50°C (cuaca cerah)"},{"label":"Bahan","value":"PVC lapis ganda, bebas ftalat"},{"label":"Kelengkapan","value":"Selang 1 m + kepala pancuran"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pemanas-air-surya-portabel-20l/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pemanas-air-surya-portabel-20l/2.jpg'],
+ false, 1100),
+
+-- ===== DAPUR BEBAS PLASTIK =====
+('botol-minum-stainless-750ml',
+ 'Botol Minum Stainless 750 ml',
+ 'Botol minum stainless steel 304 berdinding ganda yang menjaga minuman dingin hingga 24 jam dan panas hingga 12 jam. Tutupnya dari baja dengan segel silikon food grade, tidak membawa rasa plastik. Mulut botol cukup lebar untuk es batu dan mudah dibersihkan dengan sikat. Satu botol ini dipakai bertahun-tahun, menggantikan botol plastik sekali pakai yang biasanya dibeli untuk kebutuhan harian.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 129000, 70, 3.20, 3000,
+ 'Menggantikan sekitar 150 botol plastik 600 ml per tahun pada pemakaian rutin.',
+ '{12}',
+ '[{"label":"Kapasitas","value":"750 ml"},{"label":"Bahan","value":"Stainless steel 304"},{"label":"Menahan dingin","value":"24 jam"},{"label":"Menahan panas","value":"12 jam"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/botol-minum-stainless-750ml/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/botol-minum-stainless-750ml/2.jpg'],
+ true, 380),
+
+('sedotan-bambu-sikat-6pcs',
+ 'Set Sedotan Bambu & Sikat (6 pcs)',
+ 'Enam sedotan dari bambu utuh yang dipotong dan dihaluskan tanpa pelapis kimia, dilengkapi sikat pembersih dari serat alami dan kantong kain kecil. Cuci dengan air hangat dan keringkan, lalu pakai lagi. Setiap batang unik karena warna dan ruas bambunya berbeda. Cocok untuk kopi es, jus, dan smoothie. Bambu yang sudah tua bisa dikomposkan.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 45000, 80, 0.80, 150,
+ 'Menggantikan sekitar 300 sedotan plastik sekali pakai per tahun.',
+ '{12}',
+ '[{"label":"Isi paket","value":"6 sedotan + 1 sikat + 1 kantong"},{"label":"Panjang","value":"20 cm"},{"label":"Diameter","value":"8–12 mm"},{"label":"Bahan","value":"Bambu alami, tanpa pelapis"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sedotan-bambu-sikat-6pcs/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sedotan-bambu-sikat-6pcs/2.jpg'],
+ false, 90),
+
+('kotak-bekal-stainless-2-sekat',
+ 'Kotak Bekal Stainless 2 Sekat',
+ 'Kotak bekal stainless steel dengan dua sekat sehingga nasi dan lauk tidak bercampur. Penutupnya berpengunci empat sisi dengan gasket silikon yang mencegah tumpah di dalam tas. Tahan dipakai di microwave bila tutupnya dibuka dan aman dicuci di mesin cuci piring. Lebih awet dari wadah plastik, tidak menyerap bau atau noda sambal, dan tidak melepaskan zat kimia saat terkena makanan panas.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 119000, 55, 2.50, 1200,
+ 'Menggantikan kotak styrofoam atau plastik sekali pakai untuk sekitar 200 kali makan siang per tahun.',
+ '{12}',
+ '[{"label":"Kapasitas","value":"1.000 ml (2 sekat)"},{"label":"Bahan","value":"Stainless steel 304 + silikon food grade"},{"label":"Penutup","value":"Kunci 4 sisi, anti bocor"},{"label":"Perawatan","value":"Aman mesin cuci piring"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/kotak-bekal-stainless-2-sekat/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/kotak-bekal-stainless-2-sekat/2.jpg'],
+ false, 420),
+
+('beeswax-wrap-3-ukuran',
+ 'Beeswax Wrap (3 ukuran)',
+ 'Kain katun yang dilapisi lilin lebah, resin pohon, dan minyak jojoba untuk membungkus makanan tanpa plastik wrap. Hangat dari tangan membuatnya lentur dan menempel pada mangkuk, buah potong, atau roti. Cuci dengan air dingin dan sabun lembut, pakai ulang hingga satu tahun. Tidak untuk daging mentah atau makanan panas. Setelah tidak terpakai, kain bisa dikomposkan atau dijadikan pemantik api.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 79000, 40, 1.40, 800,
+ 'Menggantikan sekitar 100 meter plastik wrap selama masa pakai 1 tahun.',
+ '{12}',
+ '[{"label":"Ukuran","value":"S 18x18 cm, M 25x25 cm, L 33x35 cm"},{"label":"Bahan","value":"Katun organik, lilin lebah, resin, jojoba"},{"label":"Masa pakai","value":"±1 tahun"},{"label":"Perawatan","value":"Cuci air dingin"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/beeswax-wrap-3-ukuran/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/beeswax-wrap-3-ukuran/2.jpg'],
+ false, 120),
+
+('tas-belanja-kanvas-lipat',
+ 'Tas Belanja Kanvas Lipat',
+ 'Tas belanja dari kanvas katun tebal yang dilipat menjadi kantong kecil seukuran telapak tangan dan bisa disimpan di tas harian. Kuat menahan beban hingga 15 kg dengan jahitan ganda di pegangan. Bisa dicuci mesin. Ukurannya cukup untuk belanja mingguan di pasar atau minimarket. Tersedia dalam warna alami tanpa cetakan tebal, sehingga tidak mudah retak setelah banyak dicuci.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 59000, 75, 1.60, 1500,
+ 'Menggantikan sekitar 300 kantong plastik per tahun jika dipakai untuk belanja rutin.',
+ '{12,13}',
+ '[{"label":"Ukuran","value":"40 x 38 x 12 cm"},{"label":"Bahan","value":"Kanvas katun 12 oz"},{"label":"Beban maksimum","value":"15 kg"},{"label":"Perawatan","value":"Cuci mesin"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/tas-belanja-kanvas-lipat/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/tas-belanja-kanvas-lipat/2.jpg'],
+ false, 160),
+
+('spons-sabut-alami-isi-3',
+ 'Spons Sabut Alami (isi 3)',
+ 'Spons cuci piring dari sabut luffa yang dikeringkan, tanpa serat sintetis. Sabut ini kasar saat kering dan melunak setelah basah sehingga efektif mengangkat lemak tanpa menggores panci. Cepat kering, jadi tidak mudah berbau. Setelah dua sampai tiga bulan, spons dapat dikomposkan sepenuhnya, tidak meninggalkan serpihan mikroplastik seperti spons sintetis. Dalam satu paket ada tiga buah untuk dapur, kamar mandi, dan perabot.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 35000, 80, 0.60, 200,
+ 'Menggantikan sekitar 12 spons sintetis per tahun dan menghindari pelepasan mikroplastik ke saluran air.',
+ '{12}',
+ '[{"label":"Isi paket","value":"3 spons"},{"label":"Bahan","value":"Sabut luffa alami"},{"label":"Ukuran","value":"±10 x 7 cm"},{"label":"Umur pakai","value":"2–3 bulan"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/spons-sabut-alami-isi-3/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/spons-sabut-alami-isi-3/2.jpg'],
+ false, 60),
+
+('sabun-batang-cuci-piring',
+ 'Sabun Batang Cuci Piring',
+ 'Sabun cuci piring padat dari minyak kelapa dan minyak sawit bersertifikat RSPO dengan aroma jeruk nipis alami. Gosokkan spons basah ke batang sabun, lalu cuci seperti biasa. Satu batang setara sekitar tiga botol sabun cair ukuran 500 ml. Dikemas dalam kertas yang bisa didaur ulang, tanpa botol plastik. Taruh di wadah berlubang agar kering dan tahan lama.',
+ (select id from categories where slug='dapur-bebas-plastik'),
+ 29000, 80, 0.50, 250,
+ 'Menghindari sekitar 3 botol plastik 500 ml untuk setiap batang yang terpakai.',
+ '{12}',
+ '[{"label":"Berat","value":"150 g"},{"label":"Bahan utama","value":"Minyak kelapa, sawit RSPO, jeruk nipis"},{"label":"Kemasan","value":"Kertas daur ulang"},{"label":"Setara","value":"±1,5 liter sabun cair"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sabun-batang-cuci-piring/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sabun-batang-cuci-piring/2.jpg'],
+ false, 170),
+
+-- ===== PERAWATAN DIRI =====
+('sampo-batang-rempah',
+ 'Sampo Batang Rempah',
+ 'Sampo padat berbahan minyak kelapa, minyak zaitun, dan ekstrak serai serta lidah buaya. Basahi batang dan gosok ke rambut basah hingga berbusa, lalu bilas. Satu batang cukup untuk sekitar 60–80 kali keramas. Praktis dibawa bepergian karena tidak tumpah dan lolos pemeriksaan bagasi kabin. Dikemas dalam kardus tanpa lapisan plastik. Cocok untuk rambut normal hingga berminyak.',
+ (select id from categories where slug='perawatan-diri'),
+ 59000, 65, 0.90, 200,
+ 'Satu batang menggantikan sekitar 2 botol sampo plastik 250 ml.',
+ '{12}',
+ '[{"label":"Berat","value":"80 g"},{"label":"Jenis rambut","value":"Normal hingga berminyak"},{"label":"Jumlah pakai","value":"60–80 kali keramas"},{"label":"Kemasan","value":"Kardus daur ulang"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sampo-batang-rempah/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sampo-batang-rempah/2.jpg'],
+ true, 110),
+
+('sikat-gigi-bambu-isi-4',
+ 'Sikat Gigi Bambu (isi 4)',
+ 'Empat sikat gigi dengan gagang bambu yang diolah agar tahan lembab. Bulu sikat berbahan nilon bebas BPA dengan kekerasan sedang. Gagang diberi warna penanda berbeda sehingga seisi rumah tidak tertukar. Ganti setiap tiga bulan. Setelah dipakai, cabut bulunya dengan tang dan gagang bambu bisa dikomposkan atau dipakai sebagai penanda tanaman. Satu paket cukup untuk satu orang selama satu tahun.',
+ (select id from categories where slug='perawatan-diri'),
+ 49000, 70, 0.70, 80,
+ 'Menghindari 4 gagang plastik per paket. Bulu nilon tetap harus dibuang terpisah.',
+ '{12}',
+ '[{"label":"Isi paket","value":"4 sikat"},{"label":"Gagang","value":"Bambu Moso"},{"label":"Bulu","value":"Nilon bebas BPA, medium"},{"label":"Kemasan","value":"Kertas kraft"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sikat-gigi-bambu-isi-4/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/sikat-gigi-bambu-isi-4/2.jpg'],
+ false, 80),
+
+('deodoran-balm-tanpa-plastik',
+ 'Deodoran Balm Tanpa Kemasan Plastik',
+ 'Deodoran padat dari mentega shea, baking soda, dan minyak kelapa dalam tabung kertas yang bisa didorong naik seperti lipbalm. Menetralkan bau tanpa aluminium. Oleskan tipis pada kulit kering. Sebagian orang sensitif terhadap baking soda, jadi coba dulu di area kecil. Tabungnya dari kertas dan karton sehingga bisa didaur ulang. Satu tabung cukup untuk sekitar tiga bulan.',
+ (select id from categories where slug='perawatan-diri'),
+ 69000, 50, 0.60, 60,
+ 'Menghindari 1 tabung plastik per 3 bulan pemakaian.',
+ '{12}',
+ '[{"label":"Berat","value":"50 g"},{"label":"Bahan utama","value":"Shea butter, baking soda, minyak kelapa"},{"label":"Bebas","value":"Aluminium, paraben"},{"label":"Kemasan","value":"Tabung kertas"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/deodoran-balm-tanpa-plastik/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/deodoran-balm-tanpa-plastik/2.jpg'],
+ false, 90),
+
+('pembalut-kain-reusable-set-3',
+ 'Pembalut Kain Reusable (set 3)',
+ 'Tiga pembalut kain berlapis katun organik di sisi atas, lapisan serap dari bambu, dan lapisan bawah anti tembus. Dipasang dengan kancing sehingga tidak bergeser. Cuci dengan air dingin lalu cuci biasa, dan bisa dipakai ulang hingga dua tahun. Ukuran S, M, dan L untuk hari yang berbeda. Lembut di kulit dan mengurangi sampah pembalut sekali pakai yang sulit terurai.',
+ (select id from categories where slug='perawatan-diri'),
+ 99000, 35, 2.80, 1800,
+ 'Menggantikan sekitar 150 pembalut sekali pakai selama 2 tahun.',
+ '{12,13}',
+ '[{"label":"Isi paket","value":"3 pembalut (S, M, L)"},{"label":"Bahan","value":"Katun organik + serat bambu"},{"label":"Masa pakai","value":"Hingga 2 tahun"},{"label":"Perawatan","value":"Rendam air dingin, cuci mesin"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pembalut-kain-reusable-set-3/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pembalut-kain-reusable-set-3/2.jpg'],
+ false, 140),
+
+-- ===== FESYEN SIRKULAR =====
+('kaus-katun-organik-unisex',
+ 'Kaus Katun Organik Unisex',
+ 'Kaus polos dari katun organik bersertifikat GOTS dengan potongan lurus yang cocok untuk semua bentuk badan. Kainnya 180 gsm, cukup tebal untuk tidak menerawang tapi tetap adem. Dijahit di Indonesia dengan pewarna berbasis air. Katun organik ditanam tanpa pestisida sintetis dan memakai jauh lebih sedikit air daripada katun biasa. Tersedia ukuran S sampai XL dalam warna krem, hijau lumut, dan hitam.',
+ (select id from categories where slug='fesyen-sirkular'),
+ 179000, 60, 5.00, 0,
+ 'Katun organik menghasilkan emisi lebih rendah per kaus dibandingkan katun konvensional (estimasi 46% lebih rendah).',
+ '{12,13}',
+ '[{"label":"Bahan","value":"100% katun organik GOTS, 180 gsm"},{"label":"Ukuran","value":"S, M, L, XL"},{"label":"Warna","value":"Krem, hijau lumut, hitam"},{"label":"Perawatan","value":"Cuci mesin 30°C"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/kaus-katun-organik-unisex/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/kaus-katun-organik-unisex/2.jpg'],
+ false, 220),
+
+('tote-bag-kain-perca',
+ 'Tote Bag dari Kain Perca',
+ 'Tote bag dari potongan kain sisa produksi konveksi yang dijahit ulang oleh pengrajin lokal. Karena kainnya sisa, tidak ada dua tas yang persis sama dan pola yang Anda terima adalah satu-satunya. Dilapisi kain dalam dengan satu kantong kecil dan tali yang kuat. Muat laptop 14 inci dan perlengkapan harian. Pembelian ini membantu mencegah limbah kain pabrik berakhir di tempat pembuangan.',
+ (select id from categories where slug='fesyen-sirkular'),
+ 89000, 30, 2.20, 1200,
+ 'Memanfaatkan sekitar 0,6 m² kain sisa per tas dan menggantikan sekitar 250 kantong plastik.',
+ '{12}',
+ '[{"label":"Ukuran","value":"38 x 40 x 10 cm"},{"label":"Bahan","value":"Kain perca katun dan linen"},{"label":"Kantong","value":"1 kantong dalam"},{"label":"Catatan","value":"Pola unik, tiap tas berbeda"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/tote-bag-kain-perca/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/tote-bag-kain-perca/2.jpg'],
+ false, 250),
+
+('dompet-kulit-nanas',
+ 'Dompet Kulit Nanas',
+ 'Dompet lipat dua dengan bahan nabati dari serat daun nanas, yaitu limbah panen yang biasanya dibakar atau dibuang. Terasa seperti kulit tipis, tahan gores, dan dilapisi tanpa PVC. Ada enam slot kartu, satu kantong uang kertas, dan satu kantong koin berkancing. Warna akan sedikit berubah seiring pemakaian. Bahan ini tidak sama dengan kulit hewan dan tidak melibatkan penyamakan krom.',
+ (select id from categories where slug='fesyen-sirkular'),
+ 149000, 0, 3.00, 0,
+ 'Menggunakan limbah daun nanas dan menghindari penyamakan kulit hewan (estimasi emisi 3 kg CO2e lebih rendah per dompet).',
+ '{12}',
+ '[{"label":"Bahan","value":"Serat daun nanas + dasar katun"},{"label":"Slot kartu","value":"6"},{"label":"Ukuran","value":"11 x 9 cm (terlipat)"},{"label":"Bebas","value":"PVC, krom, bahan hewani"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/dompet-kulit-nanas/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/dompet-kulit-nanas/2.jpg'],
+ false, 90),
+
+-- ===== BERKEBUN =====
+('komposter-rumah-tangga-20l',
+ 'Komposter Rumah Tangga 20L',
+ 'Tong komposter berkapasitas 20 liter untuk mengolah sisa sayur, buah, ampas kopi, dan daun kering menjadi kompos. Punya ventilasi udara, penampung air lindi di dasar yang bisa dipakai sebagai pupuk cair, dan tutup yang menahan bau serta lalat. Muat di balkon atau dapur belakang. Dengan pengadukan rutin, kompos matang dalam 6–8 minggu. Sisa makanan yang dikomposkan tidak menghasilkan metana seperti saat menumpuk di tempat pembuangan.',
+ (select id from categories where slug='berkebun'),
+ 329000, 20, 9.00, 0,
+ 'Mengalihkan sekitar 150 kg sisa dapur per tahun dari tempat pembuangan dan menghindari emisi metana.',
+ '{12,15}',
+ '[{"label":"Kapasitas","value":"20 liter"},{"label":"Bahan","value":"Polipropilen daur ulang"},{"label":"Waktu matang","value":"6–8 minggu"},{"label":"Fitur","value":"Ventilasi, kran lindi, tutup rapat"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/komposter-rumah-tangga-20l/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/komposter-rumah-tangga-20l/2.jpg'],
+ true, 2800),
+
+('paket-bibit-sayur-organik-5',
+ 'Paket Bibit Sayur Organik (5 jenis)',
+ 'Lima sachet benih sayur varietas lokal yang mudah tumbuh di pot atau kebun kecil: kangkung, bayam hijau, sawi pakcoy, cabai rawit, dan tomat ceri. Benih tidak dilapisi fungisida dan dikemas dalam amplop kertas dengan petunjuk tanam di baliknya. Kangkung dan bayam bisa dipanen dalam 3–4 minggu. Cocok untuk pemula yang ingin mulai menanam makanan sendiri di rumah.',
+ (select id from categories where slug='berkebun'),
+ 65000, 80, 2.00, 0,
+ 'Menanam sayur sendiri mengurangi emisi transportasi dan kemasan, kira-kira 2 kg CO2e per musim tanam.',
+ '{15}',
+ '[{"label":"Isi paket","value":"5 sachet benih"},{"label":"Jenis","value":"Kangkung, bayam, pakcoy, cabai rawit, tomat ceri"},{"label":"Perlakuan benih","value":"Tanpa fungisida"},{"label":"Kemasan","value":"Amplop kertas"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/paket-bibit-sayur-organik-5/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/paket-bibit-sayur-organik-5/2.jpg'],
+ false, 60),
+
+('pot-tanam-sabut-kelapa-isi-6',
+ 'Pot Tanam dari Sabut Kelapa (isi 6)',
+ 'Enam pot semai dari sabut kelapa yang ditanam langsung ke tanah bersama bibitnya, sehingga akar tidak terganggu saat dipindah. Sabut menahan kelembapan namun tetap berpori, dan terurai dalam beberapa bulan. Menggantikan polybag plastik yang sulit didaur ulang. Diameter 8 cm, cocok untuk semai sayur, bunga, atau bibit pohon kecil.',
+ (select id from categories where slug='berkebun'),
+ 55000, 70, 1.10, 90,
+ 'Menggantikan polybag plastik dan memanfaatkan sabut kelapa, produk samping yang sering terbuang.',
+ '{15}',
+ '[{"label":"Isi paket","value":"6 pot"},{"label":"Diameter","value":"8 cm"},{"label":"Bahan","value":"Sabut kelapa tanpa lateks"},{"label":"Terurai","value":"Dalam 3–6 bulan di tanah"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pot-tanam-sabut-kelapa-isi-6/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pot-tanam-sabut-kelapa-isi-6/2.jpg'],
+ false, 200),
+
+('bibit-pohon-buah-mini',
+ 'Bibit Pohon Buah Mini (Jambu/Jeruk)',
+ 'Bibit pohon jambu kristal atau jeruk dengan tinggi 40–60 cm yang dicangkok sehingga berbuah lebih cepat, biasanya dalam 1–2 tahun. Dikirim dalam polybag berisi media tanam dengan akar yang sehat. Cocok untuk pekarangan atau pot besar di teras. Pohon yang tumbuh menyerap karbon dan memberi buah untuk rumah. Pilih jenis pada catatan pesanan, dan kami kirim sesuai ketersediaan.',
+ (select id from categories where slug='berkebun'),
+ 85000, 40, 22.00, 0,
+ 'Pohon buah dewasa menyerap sekitar 22 kg CO2 per tahun (estimasi untuk pohon yang tumbuh sehat).',
+ '{13,15}',
+ '[{"label":"Tinggi bibit","value":"40–60 cm"},{"label":"Jenis","value":"Jambu kristal atau jeruk"},{"label":"Asal","value":"Hasil cangkok"},{"label":"Perkiraan berbuah","value":"1–2 tahun"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/bibit-pohon-buah-mini/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/bibit-pohon-buah-mini/2.jpg'],
+ true, 1500),
+
+('pupuk-organik-cair-1l',
+ 'Pupuk Organik Cair 1 L',
+ 'Pupuk cair dari fermentasi limbah dapur dan kotoran ternak yang dipakai untuk sayur, tanaman hias, dan buah. Encerkan satu tutup dalam satu liter air dan siramkan ke tanah seminggu sekali. Mengandung nitrogen, fosfor, dan kalium alami serta mikroba yang membantu tanah. Dikemas dalam botol HDPE yang dapat diisi ulang. Aroma fermentasi ringan akan hilang dalam beberapa jam setelah disiram.',
+ (select id from categories where slug='berkebun'),
+ 49000, 55, 1.30, 0,
+ 'Mengurangi kebutuhan pupuk kimia yang proses produksinya menghasilkan emisi tinggi.',
+ '{15}',
+ '[{"label":"Volume","value":"1 liter"},{"label":"Dosis","value":"1 tutup per 1 liter air"},{"label":"Kandungan","value":"NPK alami + mikroba"},{"label":"Kemasan","value":"Botol HDPE, bisa diisi ulang"}]',
+ array['https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pupuk-organik-cair-1l/1.jpg','https://YOUR_PROJECT_REF.supabase.co/storage/v1/object/public/product-images/pupuk-organik-cair-1l/2.jpg'],
+ false, 1100)
+
+on conflict (slug) do update set
+  name              = excluded.name,
+  description       = excluded.description,
+  category_id       = excluded.category_id,
+  price_idr         = excluded.price_idr,
+  stock             = excluded.stock,
+  co2e_avoided_kg   = excluded.co2e_avoided_kg,
+  plastic_avoided_g = excluded.plastic_avoided_g,
+  impact_note       = excluded.impact_note,
+  sdg_goals         = excluded.sdg_goals,
+  specs             = excluded.specs,
+  images            = excluded.images,
+  is_featured       = excluded.is_featured,
+  weight_g          = excluded.weight_g;
+
+-- ---------- Verifikasi ----------
+-- Harus menampilkan 24 baris dan lima kategori.
+-- select c.name, count(*) from products p join categories c on c.id = p.category_id group by c.name order by 1;
