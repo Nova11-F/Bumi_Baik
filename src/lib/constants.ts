@@ -42,6 +42,8 @@ export const SHIPPING_ZONES = {
   luarJawa: { label: "Luar Jawa", rateIdr: 35_000 },
 } as const;
 
+export type ShippingZone = keyof typeof SHIPPING_ZONES;
+
 export const FREE_SHIPPING_MIN_IDR = 300_000;
 
 export const PRODUCTS_PER_PAGE = 12;

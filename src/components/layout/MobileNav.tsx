@@ -10,6 +10,7 @@ const links = [
   { href: "/dampak", label: "Dampak" },
   { href: "/keranjang", label: "Keranjang" },
   { href: "/akun", label: "Akun" },
+  { href: "/pesanan", label: "Pesanan" },
 ];
 
 type MobileNavProps = {

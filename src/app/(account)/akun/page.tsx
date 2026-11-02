@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AddressManager } from "@/components/account/AddressManager";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { SignOutForm } from "@/components/account/SignOutForm";
@@ -56,6 +57,13 @@ export default async function AkunPage({ searchParams }: AkunPageProps) {
 
         <SignOutForm />
       </header>
+
+      <Link
+        href="/pesanan"
+        className="mt-6 inline-flex min-h-11 items-center rounded-md border border-forest-700 px-5 font-medium text-forest-700 hover:bg-forest-100"
+      >
+        Lihat pesanan saya
+      </Link>
 
       <section aria-labelledby="profile-heading" className="mt-8 rounded-md border border-paper-200 bg-paper-50 p-5 sm:p-6">
         <h2
