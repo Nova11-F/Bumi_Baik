@@ -11,6 +11,10 @@ const tanggalFormatter = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
 });
 
+const angkaFormatter = new Intl.NumberFormat("id-ID", {
+  maximumFractionDigits: 2,
+});
+
 export function rupiah(value: number): string {
   return rupiahFormatter.format(value).replace(/\u00a0/g, " ");
 }
@@ -22,4 +26,12 @@ export function tanggal(value: Date | string | number): string {
       : new Date(value);
 
   return tanggalFormatter.format(date);
+}
+
+export function angka(value: number): string {
+  return angkaFormatter.format(value);
+}
+
+export function co2e(value: number): string {
+  return `−${angka(value)} kg CO₂e`;
 }
