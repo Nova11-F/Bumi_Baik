@@ -30,6 +30,7 @@ export function SearchBox({
   const [results, setResults] = useState<ProductListItem[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const trimmedQuery = query.trim();
 
@@ -37,12 +38,14 @@ export function SearchBox({
     if (trimmedQuery.length < 2) {
       setResults([]);
       setLoading(false);
+      setSearchError(false);
       setActiveIndex(-1);
       return;
     }
 
     const controller = new AbortController();
     setLoading(true);
+    setSearchError(false);
 
     const timer = window.setTimeout(async () => {
       try {
@@ -57,11 +60,13 @@ export function SearchBox({
 
         const data = (await response.json()) as SearchResponse;
         setResults(data.products);
+        setSearchError(false);
         setActiveIndex(-1);
         setOpen(true);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setResults([]);
+          setSearchError(true);
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -176,6 +181,7 @@ export function SearchBox({
             onClick={() => {
               setQuery("");
               setResults([]);
+              setSearchError(false);
               setOpen(false);
             }}
             aria-label="Hapus pencarian"
@@ -186,7 +192,7 @@ export function SearchBox({
         )}
       </form>
 
-      {showDropdown && (
+      {showDropdown && results.length > 0 && (
         <ul
           id={listId}
           role="listbox"
@@ -195,16 +201,6 @@ export function SearchBox({
             variant === "desktop" ? "min-w-80" : ""
           }`}
         >
-          {loading && results.length === 0 && (
-            <li className="px-3 py-3 text-sm text-ink-600">Mencari produk…</li>
-          )}
-
-          {!loading && results.length === 0 && (
-            <li className="px-3 py-3 text-sm text-ink-600">
-              Tidak ada produk yang cocok. Coba kata lain.
-            </li>
-          )}
-
           {results.map((product, index) => (
             <li key={product.id}>
               <Link
@@ -240,6 +236,33 @@ export function SearchBox({
             </li>
           ))}
         </ul>
+      )}
+      {showDropdown && results.length === 0 && (
+        <div
+          id={listId}
+          role="status"
+          className="absolute left-0 right-0 top-full z-50 mt-2 rounded-md border border-paper-200 bg-paper-50 p-4"
+        >
+          <p className="text-sm text-ink-600">
+            {loading
+              ? "Sedang mencari produk…"
+              : searchError
+                ? "Pencarian belum berhasil dimuat. Anda masih dapat membuka hasil pencarian."
+                : `Tidak ada saran produk untuk “${trimmedQuery}”.`}
+          </p>
+          {!loading && (
+            <Link
+              href={`/produk?q=${encodeURIComponent(trimmedQuery)}`}
+              onClick={() => {
+                setOpen(false);
+                onNavigate?.();
+              }}
+              className="mt-3 inline-flex min-h-11 items-center rounded-md border border-forest-700 px-4 font-medium text-forest-700 hover:bg-forest-100"
+            >
+              Buka hasil pencarian
+            </Link>
+          )}
+        </div>
       )}
     </div>
   );

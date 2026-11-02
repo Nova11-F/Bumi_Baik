@@ -66,7 +66,7 @@ export function ResetPasswordForm() {
       <p className="text-center text-sm text-ink-600">
         <Link
           href="/akun"
-          className="font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+          className="inline-flex min-h-11 items-center font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
         >
           Kembali ke akun
         </Link>

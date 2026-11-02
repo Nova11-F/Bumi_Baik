@@ -1,11 +1,14 @@
 "use server";
 
 import crypto from "node:crypto";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/auth";
-import { MockProvider } from "@/lib/server/payments/mock";
+import {
+  isMockPaymentEnabled,
+  MockProvider,
+} from "@/lib/server/payments/mock";
 import { handlePaymentWebhook } from "@/lib/server/payments/webhook";
 import { createPaymentWebhookDependencies } from "@/lib/server/payments/webhook-adapter";
 import type { FormState } from "@/lib/validators/common";
@@ -19,6 +22,8 @@ export async function submitMockPayment(
   _previousState: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  if (!isMockPaymentEnabled()) notFound();
+
   const parsed = mockPaymentSchema.safeParse({
     ref: formData.get("ref"),
     status: formData.get("status"),
@@ -26,13 +31,6 @@ export async function submitMockPayment(
   if (!parsed.success) {
     return { status: "error", message: "Data pembayaran MOCK tidak valid." };
   }
-  if ((process.env.PAYMENT_PROVIDER ?? "mock") !== "mock") {
-    return {
-      status: "error",
-      message: "Pembayaran MOCK sedang dinonaktifkan.",
-    };
-  }
-
   const { user } = await requireUser(`/mock-pay/${parsed.data.ref}`);
   const admin = createAdminClient();
   const { data: payment, error: paymentError } = await admin

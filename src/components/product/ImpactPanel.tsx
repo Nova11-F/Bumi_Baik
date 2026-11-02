@@ -33,8 +33,8 @@ export function ImpactPanel({ co2eKg, plasticG, impactNote }: ImpactPanelProps) 
       )}
 
       <Link
-        href="/dampak"
-        className="mt-4 inline-block text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+        href="/dampak#metodologi"
+        className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
       >
         Bagaimana kami menghitung
       </Link>

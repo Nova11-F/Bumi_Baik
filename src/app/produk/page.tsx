@@ -41,7 +41,7 @@ export default async function ProdukPage({ searchParams }: ProdukPageProps) {
         aria-label="Breadcrumb"
         className="flex items-center gap-1 text-sm text-ink-600"
       >
-        <Link href="/" className="hover:text-forest-700">
+        <Link href="/" className="inline-flex min-h-11 items-center hover:text-forest-700">
           Beranda
         </Link>
         <ChevronRight
@@ -139,8 +139,15 @@ export default async function ProdukPage({ searchParams }: ProdukPageProps) {
                 Katalog masih kosong
               </h2>
               <p className="mt-2 max-w-md text-base text-ink-600">
-                Produk akan muncul di sini setelah katalog diisi.
+                Katalog belum memiliki produk aktif. Kembali ke beranda untuk
+                melihat informasi Bumi Baik.
               </p>
+              <Link
+                href="/"
+                className="mt-6 inline-flex h-11 items-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900"
+              >
+                Kembali ke beranda
+              </Link>
             </div>
           )}
 

@@ -106,7 +106,7 @@ export function ActiveChips({ params }: ActiveChipsProps) {
             type="button"
             onClick={() => navigate(chip.remove)}
             aria-label={`Hapus filter ${chip.label}`}
-            className="flex h-8 w-8 items-center justify-center rounded-sm hover:bg-forest-500/15"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm hover:bg-forest-500/15"
           >
             <X className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
           </button>
@@ -117,7 +117,7 @@ export function ActiveChips({ params }: ActiveChipsProps) {
         <button
           type="button"
           onClick={() => navigate(resetFilters(params))}
-          className="ml-1 text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+          className="ml-1 inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
         >
           Reset filter ({activeCount})
         </button>

@@ -54,7 +54,7 @@ export function SignInForm({ redirectTo, googleEnabled }: SignInFormProps) {
             </label>
             <Link
               href="/lupa-password"
-              className="mb-1 text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
             >
               Lupa password?
             </Link>
@@ -88,7 +88,7 @@ export function SignInForm({ redirectTo, googleEnabled }: SignInFormProps) {
         Belum punya akun?{" "}
         <Link
           href={`/daftar?redirect=${encodeURIComponent(redirectTo)}`}
-          className="font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
         >
           Daftar
         </Link>

@@ -17,7 +17,7 @@
 | State klien | **Zustand** (keranjang tamu) + **TanStack Query** (opsional) | Minimal |
 | Ikon | `lucide-react` | |
 | Deploy | **Vercel** (utama), Netlify (alternatif) | Lihat bagian 11 |
-| Pembayaran | **PaymentKu** lewat adapter | Lihat bagian 7 |
+| Pembayaran | **PaymenKu** (paymenku.com) lewat adapter | Lihat bagian 8 |
 
 > **Catatan:** "React untuk FE, Next.js untuk BE" diwujudkan dengan satu aplikasi Next.js. Komponen `.tsx` adalah FE React; folder `app/api/**` dan `lib/server/**` adalah BE. Tidak perlu server terpisah, sehingga deploy ke Vercel/Netlify jadi sederhana.
 
@@ -32,11 +32,11 @@
                  │ HTML/RSC, fetch               │ redirect bayar
                  ▼                               ▼
  ┌──────────────────── Next.js (Vercel) ───┐   ┌───────────────┐
- │ Server Components  (baca katalog)       │   │   PaymentKu   │
+ │ Server Components  (baca katalog)       │   │   PaymenKu   │
  │ Route Handlers /api/*                   │──▶│  (hosted pay) │
  │ Server Actions    (cart, alamat)        │   └──────┬────────┘
  │ Middleware        (refresh session)     │          │ webhook
- │ lib/server/payments/paymentku (adapter) │◀─────────┘
+ │ lib/server/payments/paymenku (adapter) │◀─────────┘
  └───────────────┬─────────────────────────┘
                  │ supabase-js (publishable key + secret key)
                  ▼
@@ -64,7 +64,8 @@ bumi-baik/
 │  │  ├─ 0001_init.sql
 │  │  ├─ 0002_rls.sql
 │  │  ├─ 0003_functions.sql
-│  │  └─ 0004_grants.sql
+│  │  ├─ 0004_grants.sql
+│  │  └─ 0005_payments_paymenku.sql
 │  └─ seed.sql                 # 24 produk
 ├─ public/
 ├─ src/
@@ -89,7 +90,7 @@ bumi-baik/
 │  │  ├─ api/
 │  │  │  ├─ search/route.ts                # Autosuggest
 │  │  │  ├─ checkout/route.ts              # Buat order + transaksi
-│  │  │  ├─ payments/paymentku/webhook/route.ts
+│  │  │  ├─ payments/paymenku/webhook/route.ts
 │  │  │  └─ cron/expire-orders/route.ts    # Vercel Cron
 │  │  ├─ layout.tsx  globals.css  not-found.tsx  error.tsx
 │  │  ├─ sitemap.ts  robots.ts
@@ -108,7 +109,7 @@ bumi-baik/
 │  │  │  ├─ pricing.ts          # hitung subtotal, ongkir, dampak
 │  │  │  └─ payments/
 │  │  │     ├─ types.ts         # PaymentProvider interface
-│  │  │     ├─ paymentku.ts     # implementasi nyata
+│  │  │     ├─ paymenku.ts      # implementasi nyata
 │  │  │     ├─ mock.ts          # provider lokal untuk dev
 │  │  │     └─ index.ts         # getPaymentProvider()
 │  │  ├─ validators/            # Zod schema
@@ -253,8 +254,8 @@ create table order_items (
 create table payments (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references orders(id) on delete cascade,
-  provider text not null default 'paymentku',
-  provider_ref text,                              -- ID transaksi di PaymentKu
+  provider text not null default 'paymenku',
+  provider_ref text,                              -- trx_id di PaymenKu
   status payment_status not null default 'initiated',
   amount_idr integer not null,
   payment_url text,
@@ -388,6 +389,20 @@ grant execute on function public.is_admin() to anon, authenticated, service_role
 grant execute on function public.reserve_stock(jsonb), public.release_stock(uuid) to service_role;
 ```
 
+### 4.5 Kolom pembayaran PaymenKu `0005_payments_paymenku.sql`
+
+```sql
+-- Nominal dasar tetap di payments.amount_idr (= orders.total_idr).
+-- payable_idr = nominal yang dibayar pelanggan (bisa lebih besar karena fee_mode 'customer').
+alter table public.payments
+  add column if not exists channel_code text,
+  add column if not exists payable_idr  integer,
+  add column if not exists expires_at   timestamptz,
+  add column if not exists attempt      integer not null default 1;
+
+create index if not exists payments_order_idx on public.payments (order_id);
+```
+
 ---
 
 ## 5. Pencarian & Filter
@@ -459,123 +474,271 @@ export async function queryProducts(sp: CatalogParams) {
 
 ```ts
 // lib/server/payments/types.ts
+export interface PaymentChannel {
+  code: string;                 // mis. "qris", "bca_va", "dana", "indomaret"
+  name: string;
+  group: string;                // "QRIS" | "Virtual Account" | "E-Wallet" | "Convenience Store"
+  feeMode: "merchant" | "customer" | "split";
+  minAmount: number;            // rupiah
+  maxAmount: number;
+  iconUrl?: string;
+}
+
+export type PaymentInfo = {
+  qrUrl?: string; qrString?: string;                 // QRIS
+  bank?: string; vaNumber?: string;                  // Virtual Account
+  checkoutUrl?: string;                              // E-wallet
+  store?: string; paymentCode?: string;              // Gerai ritel
+};
+
 export interface CreatePaymentInput {
   orderId: string;
-  orderNumber: string;
-  amountIdr: number;
-  customer: { name: string; email: string; phone?: string };
-  items: { name: string; price: number; quantity: number }[];
-  returnUrl: string;          // /pesanan/[id]
-  notifyUrl: string;          // /api/payments/paymentku/webhook
-  expiresAt: Date;
+  referenceId: string;          // unik per percobaan bayar; juga dipakai sebagai Idempotency-Key
+  channelCode: string;
+  amountIdr: number;            // nominal dasar = orders.total_idr
+  customer: { name: string; email: string; phone?: string };   // phone WAJIB untuk OVO
+  items: { name: string; quantity: number }[];
+  returnUrl: string;            // /pesanan/[id]  (BUKAN bukti bayar)
 }
+
 export interface CreatePaymentResult {
-  providerRef: string;
-  paymentUrl: string;         // URL hosted payment page
+  providerRef: string;          // trx_id
+  payUrl: string;
+  payableAmountIdr: number;     // yang dibayar pelanggan (bisa = amount + fee, tergantung fee_mode)
+  expiresAt: Date | null;
+  paymentInfo: PaymentInfo;
+  sandbox: boolean;
+  simulatorUrl?: string;        // hanya sandbox
+  raw: unknown;
 }
-export type PaymentEvent = {
-  eventId: string;            // untuk idempotensi
-  providerRef: string;
-  status: "paid" | "failed" | "expired";
-  amountIdr: number;
+
+export type PaymentStatus = "pending" | "paid" | "failed" | "expired" | "cancelled" | "refunded";
+
+export interface PaymentEvent {
+  eventId: string;              // `${trx_id}:${status}` untuk idempotensi
+  providerRef: string;          // trx_id
+  referenceId?: string;
+  status: PaymentStatus;
+  amountIdr?: number;
   paidAt?: Date;
   raw: unknown;
-};
+}
+
 export interface PaymentProvider {
+  listChannels(): Promise<PaymentChannel[]>;
   createPayment(i: CreatePaymentInput): Promise<CreatePaymentResult>;
-  verifyAndParseWebhook(rawBody: string, headers: Headers): PaymentEvent; // throw jika tidak valid
+  getStatus(trxIdOrReference: string): Promise<PaymentEvent>;                  // rekonsiliasi server-ke-server
+  verifyAndParseWebhook(rawBody: string, headers: Headers, now?: Date): PaymentEvent; // throw jika tidak valid
 }
 ```
 
 ```ts
 // lib/server/payments/index.ts
 export function getPaymentProvider(): PaymentProvider {
-  return process.env.PAYMENT_PROVIDER === "mock" ? new MockProvider() : new PaymentKuProvider();
+  return process.env.PAYMENT_PROVIDER === "paymenku" ? new PaymenkuProvider() : new MockProvider();
 }
 ```
 
-### 8.2 Implementasi PaymentKu (kerangka — isi sesuai dokumentasi)
+### 8.2 PaymenKu (https://paymenku.com)
+
+Dokumentasi resmi: `docs.paymenku.com` dan repo `github.com/paymenku/docs-paymenku` (berkas `openapi.yaml` adalah kontrak API). SDK resmi hanya PHP, Node.js, dan Go; kita menulis adapter `fetch` sendiri.
+
+**Fakta yang sudah terverifikasi dari dokumentasi resmi**
+
+| Hal | Isi |
+|---|---|
+| Base URL | `https://paymenku.com/api/v1` (live dan sandbox sama; dibedakan oleh kunci) |
+| Autentikasi | Header `Authorization: Bearer <kunci>`. `sk_test_*` = sandbox (tanpa dana nyata, tanpa KYC). `sk_live_*` = produksi, **hanya aktif setelah KYC disetujui** |
+| Daftar kanal | `GET /payment-channels` (kanal aktif per merchant, beserta `fee_mode`, `min_amount`, `max_amount`). **Jangan hardcode kode kanal** |
+| Buat transaksi | `POST /transaction/create` dengan `channel_code`, `amount` (angka), `reference_id`, `customer_name`, `customer_email`, `return_url`, opsional `customer_phone`, `order_items[{name,quantity}]` |
+| Respons buat transaksi | `data.trx_id`, `data.reference_id`, `data.amount` (**string desimal**, mis. `"15305.00"`), `data.status`, `data.pay_url`, `data.payment_info`. Sandbox menambah `sandbox_mode`, `sandbox_notice`, `simulator_url` |
+| `payment_info` per kanal | QRIS: `qr_url`, `qr_string`, `expiration_date`. VA: `bank`, `va_number`, `expiration_date`. E-wallet: `checkout_url`. Gerai ritel: `store`, `payment_code` (bukan `pay_code`) |
+| Fee | `fee_mode`: `merchant` (pelanggan bayar `amount`), `customer` (pelanggan bayar `amount + fee`), `split`. Nominal pelanggan dibulatkan ke rupiah utuh. Berbeda per kanal |
+| Batas nominal | QRIS Rp1.000–10 jt; VA Rp10.000 ke atas; e-wallet Rp1.000–20 jt; gerai ritel Rp15.000–2,5 jt. Nominal di luar batas → HTTP 422 |
+| Masa berlaku | QRIS ± 15 menit; VA dan gerai ritel ± 24 jam. Baca `expiration_date`, jangan hardcode |
+| OVO | `customer_phone` wajib |
+| Cek status | `GET /check-status/{order_id}` (menerima `trx_id` **atau** `reference_id`). Untuk rekonsiliasi, bukan pengganti webhook |
+| Envelope | **Tidak seragam**: transaksi memakai `{status:"success"|"error"}`, fee/instruksi/wallet memakai `{success:true|false}`. Periksa envelope **dan** kode HTTP; galat bisa datang dengan HTTP 200 |
+| Idempotensi | Header `Idempotency-Key` (maks 255 karakter, berlaku 24 jam, respons 2xx/4xx diputar ulang). Pakai nilai yang **stabil per niat bayar**, bukan UUID baru tiap percobaan |
+| Rate limit | 120 permintaan/menit per merchant; HTTP 429 + header `Retry-After`. Jangan polling |
+| Webhook | Header `X-PaymenKu-Signature` dan `X-PaymenKu-Timestamp`. Tanda tangan = `HMAC-SHA256(timestamp + "." + rawBody, secret)`. Verifikasi dengan body **mentah**, jangan parse lalu serialisasi ulang. Balas 2xx. Pemrosesan idempoten per `trx_id` |
+| Status | `pending`, `paid`, `expired`, `failed`, `cancelled`, `refunded` |
+| Sandbox | Kunci `sk_test_*`; buka `simulator_url` dari respons untuk menandai lunas dan memicu webhook |
+
+**Belum terverifikasi — periksa di `docs.paymenku.com/docs/webhook` atau dengan satu uji sandbox, jangan ditebak**
+
+| Hal | Asumsi sementara | Cara memastikan |
+|---|---|---|
+| Encoding tanda tangan | Hex huruf kecil (opsional prefiks `sha256=`) | Halaman Webhook; atau bandingkan dengan header di uji sandbox |
+| Format timestamp dan toleransi replay | Detik epoch, toleransi 5 menit (`WEBHOOK_TOLERANCE_SECONDS`) | Halaman Webhook |
+| Nama field payload webhook | `trx_id`, `reference_id`, `status`, `amount`, `paid_at`, boleh dibungkus `data` | Lihat `webhook_events.payload` setelah webhook sandbox pertama |
+| Asal webhook secret | Dari dashboard merchant, terpisah dari API key | Dashboard (Settings) |
+| Endpoint batalkan transaksi | Ada (SDK punya `cancel`), path belum dipastikan | `openapi.yaml`, tag "Aksi Transaksi" |
 
 ```ts
-// lib/server/payments/paymentku.ts
+// lib/server/payments/paymenku.ts  (server only)
+import "server-only";
 import crypto from "node:crypto";
 
-export class PaymentKuProvider implements PaymentProvider {
-  private base = process.env.PAYMENTKU_BASE_URL!;
-  private key  = process.env.PAYMENTKU_SECRET_KEY!;
-  private whSecret = process.env.PAYMENTKU_WEBHOOK_SECRET!;
+const BASE = process.env.PAYMENKU_BASE_URL ?? "https://paymenku.com/api/v1";
+const API_KEY = process.env.PAYMENKU_API_KEY!;            // sk_test_... / sk_live_...
+const WH_SECRET = process.env.PAYMENKU_WEBHOOK_SECRET!;
+const WEBHOOK_TOLERANCE_SECONDS = 300;                    // TODO(paymenku): konfirmasi di dokumentasi webhook
 
-  async createPayment(i: CreatePaymentInput) {
-    // TODO: sesuaikan endpoint, header, dan field dengan dokumentasi PaymentKu
-    const res = await fetch(`${this.base}/v1/transactions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.key}` },
-      body: JSON.stringify({
-        reference: i.orderNumber, amount: i.amountIdr, currency: "IDR",
-        customer: i.customer, items: i.items,
-        return_url: i.returnUrl, callback_url: i.notifyUrl,
-        expires_at: i.expiresAt.toISOString(),
-      }),
-    });
-    if (!res.ok) throw new Error(`PAYMENTKU_CREATE_FAILED:${res.status}`);
-    const data = await res.json();
-    return { providerRef: data.id, paymentUrl: data.payment_url }; // TODO: sesuaikan nama field
+export class PaymenkuApiError extends Error {
+  constructor(public httpStatus: number, message: string, public errors?: unknown) { super(message); }
+}
+
+// Envelope tidak seragam: periksa status/success DAN kode HTTP.
+async function call(path: string, init: RequestInit & { idempotencyKey?: string } = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init.idempotencyKey ? { "Idempotency-Key": init.idempotencyKey } : {}),
+    },
+    cache: "no-store",
+  });
+  let body: any = null;
+  try { body = await res.json(); } catch { /* bukan JSON */ }
+  const failed = !res.ok || body?.status === "error" || body?.success === false || body == null;
+  if (failed) throw new PaymenkuApiError(res.status, body?.message ?? "PAYMENKU_REQUEST_FAILED", body?.errors);
+  return body.data;
+}
+
+// Nominal respons berupa string desimal ("15305.00"). Rupiah utuh, jadi bulatkan.
+export const parseIdr = (v: string | number) => Math.round(Number(v));
+
+export class PaymenkuProvider implements PaymentProvider {
+  async listChannels() {
+    const data = await call("/payment-channels");
+    return (data as any[]).map((c) => ({
+      code: c.code, name: c.name, group: c.group, feeMode: c.fee_mode,
+      minAmount: Number(c.min_amount), maxAmount: Number(c.max_amount), iconUrl: c.icon,
+    }));
   }
 
-  verifyAndParseWebhook(rawBody: string, headers: Headers): PaymentEvent {
-    // TODO: sesuaikan nama header & algoritma dengan PaymentKu
-    const sig = headers.get("x-paymentku-signature") ?? "";
-    const expected = crypto.createHmac("sha256", this.whSecret).update(rawBody).digest("hex");
-    const ok = sig.length === expected.length &&
-               crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-    if (!ok) throw new Error("INVALID_SIGNATURE");
-
-    const b = JSON.parse(rawBody);
+  async createPayment(i: CreatePaymentInput) {
+    const d = await call("/transaction/create", {
+      method: "POST",
+      idempotencyKey: i.referenceId,
+      body: JSON.stringify({
+        channel_code: i.channelCode,
+        amount: i.amountIdr,
+        reference_id: i.referenceId,
+        customer_name: i.customer.name,
+        customer_email: i.customer.email,
+        ...(i.customer.phone ? { customer_phone: i.customer.phone } : {}),
+        return_url: i.returnUrl,
+        order_items: i.items,
+      }),
+    });
+    const info = d.payment_info ?? {};
     return {
-      eventId: b.event_id, providerRef: b.transaction_id,
-      status: mapStatus(b.status),            // TODO: pemetaan status
-      amountIdr: Number(b.amount),
-      paidAt: b.paid_at ? new Date(b.paid_at) : undefined,
-      raw: b,
+      providerRef: d.trx_id,
+      payUrl: d.pay_url,
+      payableAmountIdr: parseIdr(d.amount),
+      expiresAt: info.expiration_date ? new Date(info.expiration_date) : null,
+      paymentInfo: {
+        qrUrl: info.qr_url, qrString: info.qr_string, bank: info.bank, vaNumber: info.va_number,
+        checkoutUrl: info.checkout_url, store: info.store, paymentCode: info.payment_code,
+      },
+      sandbox: Boolean(d.sandbox_mode),
+      simulatorUrl: d.simulator_url,
+      raw: d,
     };
+  }
+
+  async getStatus(ref: string) {
+    const d = await call(`/check-status/${encodeURIComponent(ref)}`);
+    return {
+      eventId: `${d.trx_id}:${d.status}`, providerRef: d.trx_id, referenceId: d.reference_id,
+      status: d.status, amountIdr: parseIdr(d.amount),
+      paidAt: d.paid_at ? new Date(d.paid_at) : undefined, raw: d,
+    };
+  }
+
+  verifyAndParseWebhook(rawBody: string, headers: Headers, now = new Date()) {
+    const ts = headers.get("x-paymenku-timestamp") ?? "";
+    const sig = (headers.get("x-paymenku-signature") ?? "").replace(/^sha256=/, "");
+    const expected = crypto.createHmac("sha256", WH_SECRET).update(`${ts}.${rawBody}`).digest("hex");
+    const a = Buffer.from(sig), b = Buffer.from(expected);
+    if (!ts || a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw new Error("INVALID_SIGNATURE");
+
+    // Tolak replay. TODO(paymenku): pastikan format timestamp (detik epoch?)
+    const tsNum = Number(ts);
+    if (Number.isFinite(tsNum) && Math.abs(now.getTime() / 1000 - tsNum) > WEBHOOK_TOLERANCE_SECONDS)
+      throw new Error("STALE_TIMESTAMP");
+
+    // TODO(paymenku): sesuaikan nama field setelah melihat payload sandbox pertama
+    const body = JSON.parse(rawBody);
+    const d = body.data ?? body;
+    if (!d.trx_id || !d.status) throw new Error("MALFORMED_PAYLOAD");
+    return {
+      eventId: `${d.trx_id}:${d.status}`, providerRef: d.trx_id, referenceId: d.reference_id,
+      status: d.status, amountIdr: d.amount != null ? parseIdr(d.amount) : undefined,
+      paidAt: d.paid_at ? new Date(d.paid_at) : undefined, raw: body,
+    } as PaymentEvent;
   }
 }
 ```
 
-> **Pengembangan awal:** set `PAYMENT_PROVIDER=mock`. Mock menghasilkan `paymentUrl` ke halaman lokal `/mock-pay/[ref]` dengan tombol "Berhasil / Gagal" yang memicu webhook internal. Dengan begitu seluruh alur bisa diuji sebelum dokumentasi PaymentKu siap.
+> **Pengembangan awal:** `PAYMENT_PROVIDER=mock`. Mock mengembalikan kanal palsu, `payUrl` ke `/mock-pay/[ref]`, dan memicu webhook internal dengan signature valid. Halaman `/mock-pay` wajib 404 bila provider bukan `mock`.
+>
+> **Webhook butuh URL publik.** `localhost` tidak bisa dijangkau PaymenKu. Untuk uji sandbox pakai tunnel (ngrok atau cloudflared) atau deploy preview Vercel, lalu daftarkan URL callback di dashboard merchant. Alternatif tanpa tunnel: tombol "Cek status pembayaran" (§8.4) yang memanggil `check-status`.
 
 ### 8.3 Alur `POST /api/checkout`
 
+Body (Zod): `addressId | newAddress`, `shippingMethod`, `channelCode`, `idempotencyKey`.
+
 ```
 1. Auth: ambil user (401 jika tidak ada)
-2. Validasi body (Zod): addressId | newAddress, shippingMethod, idempotencyKey
+2. Validasi body (Zod)
 3. Idempotensi: jika orders.idempotency_key sudah ada → kembalikan order/payment yang sama
-4. Muat keranjang dari DB → muat produk TERBARU → hitung di server:
-     subtotal, ongkir (constants.ts), total, total_co2e
-5. Panggil RPC reserve_stock(items)  — gagal → 409 + daftar produk bermasalah
-6. Insert orders + order_items (snapshot harga & alamat)  [service_role]
-7. provider.createPayment(...)
-     - gagal → release_stock(order) + status 'cancelled' + 502
-8. Insert payments {status:'initiated', provider_ref, payment_url}
-9. Kosongkan cart_items
-10. Respons: { orderId, paymentUrl } → klien melakukan window.location = paymentUrl
+4. Muat keranjang → produk TERBARU → hitung di server: subtotal, ongkir, total, total_co2e
+5. provider.listChannels() → pastikan channelCode ada DAN min_amount <= total <= max_amount
+     - gagal → 422 dengan pesan jelas (mis. "Indomaret maksimal Rp 2.500.000")
+     - OVO → wajib nomor telepon
+6. RPC reserve_stock(items)  — gagal → 409 + daftar produk bermasalah
+7. Insert orders + order_items (snapshot harga & alamat)  [service_role]
+8. provider.createPayment({ referenceId: order_number, channelCode, amountIdr: total, ... })
+     - galat/422/5xx → release_stock + orders.status='cancelled' + 502
+9. Insert payments { provider:'paymenku', provider_ref: trx_id, status:'initiated', amount_idr: total,
+                     payable_idr, channel_code, expires_at, payment_url: pay_url, raw_payload: respons }
+10. Kosongkan cart_items
+11. Respons { orderId, payUrl } → klien mengarahkan ke payUrl (halaman bayar PaymenKu).
+    return_url = /pesanan/[id] menampilkan status; halaman ini TIDAK mengubah status.
 ```
 
-> Langkah 5–9 sebaiknya dibungkus satu fungsi Postgres atau dikompensasi eksplisit (release stok) bila salah satu langkah gagal.
+- `payments.amount_idr` = total order (nominal dasar). `payments.payable_idr` = nominal yang dibayar pelanggan (bisa lebih besar karena fee). Tampilkan selisihnya sebagai "Biaya layanan pembayaran" di halaman pesanan.
+- Satu `reference_id` per percobaan: percobaan pertama `order_number`; "Bayar ulang" membuat `payments` baru dengan `reference_id = ${order_number}-R${attempt}`. Idempotency-Key = `reference_id`.
+- Rate limit 120/menit: simpan hasil `listChannels()` di cache server (± 5 menit).
 
-### 8.4 Alur Webhook `POST /api/payments/paymentku/webhook`
+### 8.4 Alur Webhook `POST /api/payments/paymenku/webhook`
 
 ```
 1. Baca RAW body (await req.text()) — jangan req.json() sebelum verifikasi
-2. provider.verifyAndParseWebhook(raw, headers)  → 401 jika signature salah
-3. Insert ke webhook_events (provider, event_id)
+2. provider.verifyAndParseWebhook(raw, headers) → 401 jika signature salah/timestamp kedaluwarsa; 400 jika payload tidak dikenal
+3. Insert ke webhook_events (provider, event_id = `${trx_id}:${status}`)
      - konflik unique → sudah diproses → kembalikan 200 (idempoten)
-4. Ambil payments by provider_ref; validasi amountIdr == orders.total_idr
-5. Jika status 'paid':   payments.status='paid', orders.status='paid', paid_at=now()
-   Jika 'failed'/'expired': payments.status=..., orders.status='expired', release_stock
-   (abaikan transisi mundur, mis. paid → expired)
-6. Kembalikan 200 secepat mungkin
+4. applyPaymentEvent(event)  ← fungsi bersama (webhook, sinkronisasi, cron):
+     a. Ambil payments by (provider='paymenku', provider_ref = trx_id); tak ada → 200 + log
+     b. Jika status 'paid': validasi amountIdr == payments.payable_idr (bila ada di payload)
+     c. 'paid'  → payments.status='paid', paid_at; orders.status='paid' (hanya dari 'pending')
+        'failed'|'expired'|'cancelled' → payments.status sesuai; jika tidak ada payment lain yang masih aktif
+                      → orders.status='expired' + release_stock
+        'refunded' → catat di payments; orders.status='cancelled' bila belum dikirim
+     d. Abaikan transisi mundur (mis. paid → expired)
+     e. Pembayaran TERLAMBAT (order sudah 'expired'/'cancelled' lalu 'paid' datang): tandai payments.status='paid',
+        biarkan order apa adanya, dan tampilkan di admin untuk refund manual (stok sudah dikembalikan)
+5. Kembalikan 200 secepat mungkin
 ```
+
+**Rekonsiliasi (jalur kedua, server-ke-server)**
+- `POST /api/orders/[id]/sync-payment` (login, hanya pemilik; maks 1 kali per 10 detik): memanggil `provider.getStatus(provider_ref)` lalu `applyPaymentEvent`. Dipakai oleh tombol "Cek status pembayaran" di halaman pesanan `pending`. Ini aman karena respons berasal dari panggilan API ber-secret, bukan dari klien.
+- Cron `expire-orders`: sebelum mengkedaluwarsakan pesanan `pending`, panggil `getStatus` sekali agar pesanan yang sebenarnya sudah dibayar (webhook hilang) tidak ikut kedaluwarsa.
 
 ### 8.5 Mesin Status Pesanan
 
@@ -602,8 +765,10 @@ pending ──paid──▶ paid ──admin──▶ shipped ──admin──�
 |---|---|---|---|
 | GET | `/api/search?q=` | Publik | Autosuggest maks. 5 |
 | POST | `/api/cart/hydrate` | Publik | Id produk → data terbaru (harga, stok) |
-| POST | `/api/checkout` | Login | Buat order + transaksi PaymentKu |
-| POST | `/api/payments/paymentku/webhook` | Signature | Update status bayar |
+| GET | `/api/payment-channels` | Login | Kanal pembayaran aktif + batas nominal (cache) |
+| POST | `/api/checkout` | Login | Buat order + transaksi PaymenKu |
+| POST | `/api/orders/[id]/sync-payment` | Login (pemilik) | Rekonsiliasi status ke PaymenKu |
+| POST | `/api/payments/paymenku/webhook` | Signature | Update status bayar |
 | GET | `/api/cron/expire-orders` | `CRON_SECRET` | Kedaluwarsakan pesanan |
 
 Format error seragam: `{ "error": { "code": "INSUFFICIENT_STOCK", "message": "…", "details": {…} } }`.
@@ -620,7 +785,7 @@ Format error seragam: `{ "error": { "code": "INSUFFICIENT_STOCK", "message": "�
 | Akses data pengguna lain | RLS di semua tabel + pemeriksaan `user.id` di server |
 | Webhook palsu | HMAC + `timingSafeEqual`, cek nominal, idempotensi `event_id` |
 | Oversell stok | `reserve_stock` atomik dengan `stock >= qty` |
-| Bocornya secret | `service_role`, `PAYMENTKU_*` hanya di server; tidak berawalan `NEXT_PUBLIC_` |
+| Bocornya secret | `service_role`, `PAYMENKU_API_KEY` (sk_*), `PAYMENKU_WEBHOOK_SECRET` hanya di server; tidak berawalan `NEXT_PUBLIC_` |
 | Brute force login/checkout | Rate limit (Upstash Ratelimit atau Vercel Firewall) pada `/api/checkout`, `/api/search`, auth |
 | XSS | React escape default; jangan memakai `dangerouslySetInnerHTML` untuk data pengguna |
 | Eskalasi peran | Policy update profil mengunci kolom `role` |
@@ -640,10 +805,10 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 # SERVER ONLY — jangan diawali NEXT_PUBLIC_
 SUPABASE_SECRET_KEY=
 
-PAYMENT_PROVIDER=mock            # mock | paymentku
-PAYMENTKU_BASE_URL=
-PAYMENTKU_SECRET_KEY=
-PAYMENTKU_WEBHOOK_SECRET=
+PAYMENT_PROVIDER=mock            # mock | paymenku
+PAYMENKU_BASE_URL=https://paymenku.com/api/v1
+PAYMENKU_API_KEY=                 # sk_test_... (sandbox) / sk_live_... (produksi, butuh KYC)
+PAYMENKU_WEBHOOK_SECRET=
 
 CRON_SECRET=
 ```
@@ -656,7 +821,7 @@ CRON_SECRET=
 1. Push repo ke GitHub → *Import Project* di Vercel (framework terdeteksi otomatis).
 2. Isi semua environment variable (Production dan Preview).
 3. Supabase: **Authentication → URL Configuration** — tambahkan `Site URL` dan `Redirect URLs` (domain produksi + `*.vercel.app` untuk preview).
-4. Daftarkan URL webhook di dashboard PaymentKu: `https://<domain>/api/payments/paymentku/webhook`.
+4. Daftarkan URL callback webhook di dashboard PaymenKu: `https://<domain>/api/payments/paymenku/webhook`, dan salin webhook secret-nya ke environment variable. Mulai dengan kunci `sk_test_`; kunci `sk_live_` baru aktif setelah KYC disetujui.
 5. `vercel.json` untuk cron (lihat 8.6).
 
 ### Netlify (alternatif)
@@ -720,7 +885,7 @@ Gunakan urutan ini; selalu lampirkan ketiga dokumen sebagai konteks.
 6. **Keranjang:** *"Zustand untuk tamu, `cart_items` untuk login, CartDrawer dan `/keranjang`."*
 7. **Checkout:** *"Implementasi `/api/checkout` sesuai §8.3 dengan `MockProvider` dulu, lalu stepper checkout."*
 8. **Webhook:** *"Implementasi webhook §8.4 + cron kedaluwarsa + halaman `/pesanan/[id]`."*
-9. **PaymentKu:** *"Ganti ke `PaymentKuProvider` memakai dokumentasi berikut: [tempel dokumentasi]."*
+9. **PaymenKu:** *"Implementasikan `PaymenkuProvider` sesuai `architecture.md` §8.2, uji dengan kunci sandbox."* (lihat prompt Fase 5b)
 10. **Poles:** *"Admin minimal, SEO (metadata, sitemap, JSON-LD), audit a11y dan Lighthouse, empty/error states."*
 
 **Aturan emas saat vibe coding:**

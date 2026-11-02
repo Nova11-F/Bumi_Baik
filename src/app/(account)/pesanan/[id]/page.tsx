@@ -87,7 +87,7 @@ export default async function OrderDetailPage({
     <section className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 lg:py-16">
       <Link
         href="/pesanan"
-        className="text-sm text-forest-700 underline underline-offset-4"
+        className="inline-flex min-h-11 items-center text-sm text-forest-700 underline underline-offset-4"
       >
         Kembali ke pesanan
       </Link>

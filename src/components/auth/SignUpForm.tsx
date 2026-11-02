@@ -119,7 +119,7 @@ export function SignUpForm({ redirectTo, googleEnabled }: SignUpFormProps) {
         Sudah punya akun?{" "}
         <Link
           href={`/masuk?redirect=${encodeURIComponent(redirectTo)}`}
-          className="font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
         >
           Masuk
         </Link>

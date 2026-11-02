@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { MockPayForm } from "./MockPayForm";
 import { rupiah } from "@/lib/format";
+import { isMockPaymentEnabled } from "@/lib/server/payments/mock";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/auth";
 
@@ -17,8 +18,8 @@ export default async function MockPayPage({
   params: Promise<{ ref: string }>;
 }) {
   const { ref } = await params;
+  if (!isMockPaymentEnabled()) notFound();
   const { user } = await requireUser(`/mock-pay/${ref}`);
-  if ((process.env.PAYMENT_PROVIDER ?? "mock") !== "mock") notFound();
 
   const admin = createAdminClient();
   const { data: payment, error: paymentError } = await admin
@@ -76,7 +77,7 @@ export default async function MockPayPage({
       <MockPayForm ref={ref} />
       <Link
         href={`/pesanan/${order.id}`}
-        className="mt-5 inline-block text-sm text-forest-700 underline underline-offset-4"
+        className="mt-5 inline-flex min-h-11 items-center text-sm text-forest-700 underline underline-offset-4"
       >
         Kembali ke pesanan
       </Link>

@@ -113,7 +113,7 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium text-ink-900">{address.recipient}</p>
                 {address.is_default && (
-                  <span className="rounded-full bg-forest-100 px-2.5 py-0.5 text-xs font-medium text-forest-900">
+                  <span className="rounded-full bg-forest-100 px-2.5 py-0.5 text-sm font-medium text-forest-900">
                     Utama
                   </span>
                 )}

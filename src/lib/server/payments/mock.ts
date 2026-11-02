@@ -14,6 +14,13 @@ const mockEventSchema = z.object({
   paid_at: z.string().datetime().optional(),
 });
 
+export function isMockPaymentEnabled(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.PAYMENT_PROVIDER ?? "mock") === "mock"
+  );
+}
+
 export class MockProvider implements PaymentProvider {
   private readonly secret: string;
 

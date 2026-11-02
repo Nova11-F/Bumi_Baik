@@ -120,7 +120,7 @@ Alur 3 langkah dalam satu halaman (stepper):
 2. **Pengiriman** — opsi pengiriman dengan tarif flat per zona (Jawa / luar Jawa) sebagai MVP.
 3. **Tinjau & bayar** — ringkasan pesanan, total (subtotal + ongkir), tombol "Bayar sekarang".
 
-Alur sistem: buat `order` berstatus `pending` → reservasi stok → buat transaksi di PaymentKu → arahkan pengguna ke halaman pembayaran → tunggu webhook → status `paid`.
+Alur sistem: buat `order` berstatus `pending` → reservasi stok → buat transaksi di PaymenKu → arahkan pengguna ke halaman pembayaran (`pay_url`) → tunggu webhook → status `paid`.
 
 **Acceptance criteria**
 - [ ] Validasi form di klien dan server (Zod).
@@ -128,25 +128,25 @@ Alur sistem: buat `order` berstatus `pending` → reservasi stok → buat transa
 - [ ] Jika stok tidak cukup saat checkout, pengguna diberi tahu item mana yang bermasalah.
 - [ ] Pesanan `pending` yang tidak dibayar dalam 24 jam otomatis `expired` dan stok dikembalikan.
 
-### 4.7 Pembayaran (PaymentKu)
-- Integrasi dengan layanan pembayaran milik pengguna, **PaymentKu**, lewat **lapisan adapter** (lihat `architecture.md`) agar detail API-nya terisolasi di satu modul.
-- Status pembayaran diperbarui **hanya lewat webhook yang diverifikasi signature-nya**, bukan dari redirect klien.
-- Halaman `/pesanan/[id]` menampilkan status: Menunggu pembayaran, Dibayar, Dikirim, Selesai, Dibatalkan/Kedaluwarsa.
-- Pengguna bisa melanjutkan pembayaran dari pesanan `pending`.
-
-**Asumsi yang perlu dikonfirmasi** (saya belum punya dokumentasi PaymentKu):
-| Hal | Asumsi default | Perlu diganti dengan |
-|---|---|---|
-| Model integrasi | Redirect ke halaman bayar hosted + webhook | Sesuai dokumentasi PaymentKu |
-| Autentikasi API | Secret key di header server-side | Metode sebenarnya |
-| Verifikasi webhook | HMAC-SHA256 pada raw body | Metode sebenarnya |
-| Mata uang | IDR (integer, tanpa desimal) | — |
-| Mode sandbox | Tersedia | — |
+### 4.7 Pembayaran (PaymenKu)
+- Integrasi dengan **PaymenKu** (paymenku.com), payment gateway Indonesia, lewat **lapisan adapter** (lihat `architecture.md` §8) agar detail API-nya terisolasi di satu modul.
+- **Kanal pembayaran** yang ditawarkan di checkout berasal dari API PaymenKu (`GET /payment-channels`), bukan ditulis tetap: QRIS, Virtual Account (BCA, BNI, BRI, Mandiri, dll.), e-wallet (DANA, OVO, ShopeePay), dan gerai ritel (Indomaret, Alfamart), tergantung yang aktif untuk merchant.
+- Pengguna **memilih kanal** di checkout. Kanal yang batas nominalnya tidak sesuai dengan total pesanan (mis. Indomaret maks. Rp 2.500.000) ditampilkan nonaktif dengan alasan.
+- **Biaya layanan:** bergantung `fee_mode` kanal. Bila dibebankan ke pelanggan, nominal yang dibayar = total pesanan + biaya, dan ditampilkan jelas di halaman pesanan.
+- Setelah "Bayar sekarang", pengguna diarahkan ke halaman bayar PaymenKu (`pay_url`). Halaman `/pesanan/[id]` (return URL) menampilkan status, tetapi **bukan bukti pembayaran**.
+- Status pembayaran diperbarui lewat **webhook yang diverifikasi signature-nya**. Pengguna juga bisa menekan "Cek status pembayaran" yang memanggil `check-status` PaymenKu dari server (rekonsiliasi), tidak pernah dari klien.
+- Pengembangan memakai **kunci sandbox** (`sk_test_`) tanpa dana nyata. Kunci produksi (`sk_live_`) baru aktif setelah KYC akun disetujui, jadi KYC perlu diurus sebelum rilis publik.
+- Masa berlaku berbeda per kanal (QRIS ± 15 menit, VA dan gerai ritel ± 24 jam). Pengguna bisa **bayar ulang** (percobaan baru) selama pesanan belum kedaluwarsa.
 
 **Acceptance criteria**
-- [ ] Webhook dengan signature salah ditolak (401).
+- [ ] Hanya kanal aktif dari API yang muncul di checkout; kanal di luar batas nominal tidak bisa dipilih.
+- [ ] Transaksi sandbox dibuat dengan `reference_id` = nomor pesanan dan header `Idempotency-Key`; klik ganda tidak membuat transaksi ganda.
+- [ ] Webhook dengan signature salah atau timestamp kedaluwarsa ditolak (401).
 - [ ] Webhook yang sama dikirim dua kali tidak menggandakan efek (idempoten).
-- [ ] Secret key tidak pernah muncul di bundle klien.
+- [ ] Nominal webhook yang tidak sama dengan `payable_idr` tidak mengubah status menjadi dibayar.
+- [ ] Pesanan hanya menjadi `paid` lewat webhook terverifikasi atau rekonsiliasi server-ke-server.
+- [ ] API key (`sk_*`) dan webhook secret tidak pernah muncul di bundle klien.
+- [ ] Alur sandbox end-to-end berhasil: checkout → `simulator_url` → status "Dibayar".
 
 ### 4.8 Fitur Admin Minimal
 - Peran `admin` pada tabel `profiles`.
@@ -227,7 +227,7 @@ Setiap produk wajib punya: `slug`, deskripsi 60–120 kata, 3–5 spesifikasi, 1
 ```
 Landing → Cari/Filter → Detail Produk → Tambah ke Keranjang
 → Keranjang → (Belum login? → Masuk) → Checkout (alamat → kirim → tinjau)
-→ Redirect PaymentKu → Bayar → Webhook → Status "Dibayar" → Halaman Pesanan
+→ Pilih kanal → Redirect PaymenKu → Bayar → Webhook → Status "Dibayar" → Halaman Pesanan
 ```
 
 ---
@@ -241,7 +241,7 @@ Landing → Cari/Filter → Detail Produk → Tambah ke Keranjang
 | **2. Cari & Filter** | Search, autosuggest, filter berbasis URL | Produk mudah ditemukan |
 | **3. Auth** | Login, daftar, proteksi rute, profil | Pengguna bisa masuk |
 | **4. Keranjang** | Keranjang tamu dan akun, penggabungan | Keranjang berfungsi |
-| **5. Checkout & Pembayaran** | Alamat, order, adapter PaymentKu, webhook | Transaksi end-to-end di sandbox |
+| **5. Checkout & Pembayaran** | Alamat, order, adapter PaymenKu, webhook | Transaksi end-to-end di sandbox |
 | **6. Admin & Poles** | Admin minimal, SEO, a11y, performa, empty/error state | Siap rilis |
 
 Setiap fase harus bisa dijalankan dan diuji sebelum lanjut ke fase berikutnya.
@@ -252,13 +252,15 @@ Setiap fase harus bisa dijalankan dan diuji sebelum lanjut ke fase berikutnya.
 
 | Risiko / Pertanyaan | Mitigasi |
 |---|---|
-| Dokumentasi API PaymentKu belum tersedia | Adapter terisolasi; kerjakan dulu dengan mock provider, lalu ganti |
+| Format payload webhook PaymenKu belum terverifikasi penuh | Adapter terisolasi; mulai dengan mock, lalu uji sandbox dan periksa `webhook_events.payload` |
+| KYC diperlukan untuk kunci live PaymenKu | Mulai KYC lebih awal; pengembangan penuh dengan kunci sandbox |
+| Webhook tidak bisa menjangkau `localhost` | Pakai tunnel (ngrok/cloudflared) atau deploy preview; tombol "Cek status pembayaran" sebagai cadangan |
 | Klaim dampak bisa dianggap greenwashing | Tampilkan metodologi, beri label "estimasi", sumber data jelas |
 | Foto produk | Gunakan foto lisensi bebas (Unsplash/Pexels) atau foto sendiri; jangan gambar AI generik |
 | Ongkir realistis | MVP: tarif flat; fase lanjut: integrasi API kurir |
 | Netlify vs Vercel | Disarankan Vercel (native untuk Next.js); Netlify bisa lewat adapter resmi |
 
 **Pertanyaan untuk pemilik proyek:**
-1. Bagaimana alur PaymentKu bekerja (redirect, embed, atau API langsung) dan seperti apa format webhook-nya?
-2. Metode pembayaran apa saja yang didukung (VA, e-wallet, kartu)?
+1. Apakah akun PaymenKu Anda sudah dibuat, dan kanal pembayaran apa saja yang aktif di dashboard merchant Anda?
+2. Apakah KYC PaymenKu sudah dimulai? (Dibutuhkan untuk kunci live, tidak untuk sandbox.)
 3. Apakah nama "Bumi Baik" sudah final?

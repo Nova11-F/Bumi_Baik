@@ -99,7 +99,7 @@ export function AddToCartButton({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className={`fixed inset-x-4 top-20 z-[60] rounded-md border bg-paper-50 p-4 shadow-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:top-auto sm:w-96 ${
+          className={`fixed inset-x-4 top-20 z-[60] rounded-md border bg-paper-50 p-4 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:top-auto sm:w-96 ${
             toast.success
               ? "border-forest-500 text-forest-900"
               : "border-danger text-danger"

@@ -71,7 +71,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="/dampak"
-                className="text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
               >
                 Cara menghitung dampak
               </Link>
@@ -113,7 +113,7 @@ export default async function Home() {
           </div>
           <Link
             href="/produk"
-            className="text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
           >
             Lihat semua produk
           </Link>
@@ -170,7 +170,7 @@ export default async function Home() {
               </div>
               <Link
                 href="/produk"
-                className="text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
               >
                 Lihat seluruh katalog
               </Link>
@@ -199,7 +199,7 @@ export default async function Home() {
               </p>
               <Link
                 href="/dampak"
-                className="mt-6 inline-block text-sm font-medium text-paper-50 underline underline-offset-4 hover:text-forest-100"
+                className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-paper-50 underline underline-offset-4 hover:text-forest-100"
               >
                 Baca metodologi
               </Link>
@@ -243,7 +243,7 @@ export default async function Home() {
                     Dampak terbesar:{" "}
                     <Link
                       href={`/produk/${topImpactProduct.slug}`}
-                      className="font-medium text-paper-50 underline underline-offset-4"
+                      className="inline-flex min-h-11 items-center font-medium text-paper-50 underline underline-offset-4"
                     >
                       {topImpactProduct.name}
                     </Link>

@@ -89,11 +89,11 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1 text-sm text-ink-600"
       >
-        <Link href="/" className="shrink-0 hover:text-forest-700">
+        <Link href="/" className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700">
           Beranda
         </Link>
         <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-        <Link href="/produk" className="shrink-0 hover:text-forest-700">
+        <Link href="/produk" className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700">
           Produk
         </Link>
         <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
@@ -155,7 +155,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
           <div className="mt-8 divide-y divide-paper-200 border-y border-paper-200">
             <details open className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
                 Deskripsi
                 <ChevronDown
                   className="h-5 w-5 transition-transform group-open:rotate-180"
@@ -169,7 +169,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </details>
 
             <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
                 Spesifikasi
                 <ChevronDown
                   className="h-5 w-5 transition-transform group-open:rotate-180"
@@ -192,7 +192,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </details>
 
             <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-medium text-ink-900 [&::-webkit-details-marker]:hidden">
                 Pengiriman
                 <ChevronDown
                   className="h-5 w-5 transition-transform group-open:rotate-180"

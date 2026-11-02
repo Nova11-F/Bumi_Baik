@@ -50,7 +50,7 @@ export function ForgotPasswordForm() {
         Ingat password Anda?{" "}
         <Link
           href="/masuk"
-          className="font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
+          className="inline-flex min-h-11 items-center font-medium text-forest-700 underline underline-offset-4 hover:text-forest-900"
         >
           Kembali ke halaman masuk
         </Link>

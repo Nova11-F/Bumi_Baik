@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { MockProvider } from "./mock";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isMockPaymentEnabled, MockProvider } from "./mock";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("MockProvider webhook signatures", () => {
   const provider = new MockProvider("test-secret");
@@ -33,5 +37,26 @@ describe("MockProvider webhook signatures", () => {
         new Headers({ "x-mock-signature": "invalid" }),
       ),
     ).toThrow("INVALID_SIGNATURE");
+  });
+
+  it("enables mock payments outside production when the mock provider is selected", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("PAYMENT_PROVIDER", "mock");
+
+    expect(isMockPaymentEnabled()).toBe(true);
+  });
+
+  it("disables mock payments in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PAYMENT_PROVIDER", "mock");
+
+    expect(isMockPaymentEnabled()).toBe(false);
+  });
+
+  it("disables mock payments when another provider is selected", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("PAYMENT_PROVIDER", "paymentku");
+
+    expect(isMockPaymentEnabled()).toBe(false);
   });
 });

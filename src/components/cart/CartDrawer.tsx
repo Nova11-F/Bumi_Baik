@@ -63,6 +63,10 @@ export function CartDrawer() {
             <p className="font-display text-xl text-forest-900">
               Keranjang masih kosong.
             </p>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-ink-600">
+              Tambahkan produk dari katalog untuk melihat ringkasan belanja
+              Anda di sini.
+            </p>
             <Link
               href="/produk"
               onClick={() => setDrawerOpen(false)}

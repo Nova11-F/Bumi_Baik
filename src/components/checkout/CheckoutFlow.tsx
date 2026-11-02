@@ -216,7 +216,7 @@ export function CheckoutFlow({
       </header>
 
       <details className="mt-6 rounded-md border border-paper-200 bg-paper-50 p-4 lg:hidden">
-        <summary className="cursor-pointer font-medium text-forest-900">
+        <summary className="flex min-h-11 cursor-pointer items-center font-medium text-forest-900">
           Ringkasan pesanan · {rupiah(quote.totalIdr)}
         </summary>
         <dl className="mt-4 space-y-2 border-t border-paper-200 pt-4 text-sm">
