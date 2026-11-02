@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
+import { CartProvider } from "@/components/cart/CartProvider";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import "./globals.css";
@@ -52,12 +53,14 @@ export default function RootLayout({
         >
           Lewati ke konten utama
         </a>
-        <AnnouncementBar />
-        <Header />
-        <main id="konten-utama" className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <CartProvider>
+          <AnnouncementBar />
+          <Header />
+          <main id="konten-utama" className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );

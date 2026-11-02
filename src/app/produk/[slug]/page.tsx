@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { Gallery } from "@/components/product/Gallery";
 import { ImpactPanel } from "@/components/product/ImpactPanel";
 import { ProductGrid } from "@/components/product/ProductGrid";
@@ -146,13 +147,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             />
           </div>
 
-          <button
-            type="button"
-            disabled={product.stock === 0}
-            className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400"
-          >
-            {product.stock === 0 ? "Stok habis" : "Tambah ke keranjang"}
-          </button>
+          <AddToCartButton productId={product.id} stock={product.stock} />
 
           <div className="mt-8 divide-y divide-paper-200 border-y border-paper-200">
             <details open className="group py-4">
