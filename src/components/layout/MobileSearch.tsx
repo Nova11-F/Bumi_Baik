@@ -1,7 +1,8 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRef } from "react";
+import { SearchBox } from "@/components/search/SearchBox";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 
 type MobileSearchProps = {
@@ -24,14 +25,8 @@ export function MobileSearch({ open, onClose }: MobileSearchProps) {
         aria-label="Pencarian produk"
         className="flex h-full flex-col"
       >
-        <div className="flex h-16 items-center gap-3 border-b border-paper-200 px-4">
-          <Search className="h-5 w-5 shrink-0 text-ink-600" strokeWidth={1.5} aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="Cari produk"
-            placeholder="Cari produk"
-            className="h-11 min-w-0 flex-1 bg-transparent text-base text-ink-900 placeholder:text-ink-400 focus:outline-none"
-          />
+        <div className="flex h-16 items-center gap-2 border-b border-paper-200 px-4">
+          <SearchBox variant="mobile" autoFocus onNavigate={onClose} />
           <button
             type="button"
             onClick={onClose}
@@ -41,9 +36,6 @@ export function MobileSearch({ open, onClose }: MobileSearchProps) {
             <X className="h-6 w-6" strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
-        <p className="px-4 py-6 text-sm text-ink-600">
-          Pencarian produk akan tersedia pada fase berikutnya.
-        </p>
       </div>
     </div>
   );
