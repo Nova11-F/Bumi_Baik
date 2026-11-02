@@ -57,6 +57,7 @@ type CartContextValue = {
   totalCo2eKg: number;
   totalPlasticAvoidedG: number;
   isReady: boolean;
+  isCountReady: boolean;
   isSignedIn: boolean;
   isDrawerOpen: boolean;
   notice: string | null;
@@ -124,6 +125,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     void useGuestCartStore.persist.rehydrate();
   }, []);
 
@@ -157,7 +162,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch {
         result = {
           ok: false,
-          message: "Keranjang belum berhasil disinkronkan. Coba muat ulang halaman.",
+          message:
+            "Keranjang belum berhasil disinkronkan. Coba muat ulang halaman.",
         };
       }
 
@@ -267,13 +273,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0,
   );
   const totalCo2eKg = items.reduce(
-    (sum, item) =>
-      sum + (item.product?.co2e_avoided_kg ?? 0) * item.quantity,
+    (sum, item) => sum + (item.product?.co2e_avoided_kg ?? 0) * item.quantity,
     0,
   );
   const totalPlasticAvoidedG = items.reduce(
-    (sum, item) =>
-      sum + (item.product?.plastic_avoided_g ?? 0) * item.quantity,
+    (sum, item) => sum + (item.product?.plastic_avoided_g ?? 0) * item.quantity,
     0,
   );
 
@@ -295,10 +299,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       if (userId) {
         try {
-          const result = applyActionResult(
-            await addToCart({ productId, quantity }),
-          );
-          if (result.ok) setDrawerOpen(true);
+          const actionResult = await addToCart({ productId, quantity });
+          const result = applyActionResult(actionResult);
+          if (
+            result.ok &&
+            actionResult.ok &&
+            actionResult.adjustedProductIds?.includes(productId)
+          ) {
+            return {
+              ok: false,
+              message:
+                "Stok tidak cukup. Jumlah di keranjang disesuaikan dengan stok terbaru.",
+            };
+          }
           return result;
         } catch {
           const message = "Produk belum berhasil ditambahkan ke keranjang.";
@@ -340,22 +353,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
           .getState()
           .items.find((item) => item.productId === productId)?.quantity ?? 0;
       const next = Math.min(99, previous + quantity, latestProduct.stock);
-      if (next <= 0) {
-        return { ok: false, message: "Produk ini sedang tidak tersedia." };
+      if (next <= previous) {
+        const message =
+          "Stok tidak cukup. Keranjang sudah mencapai jumlah yang tersedia.";
+        setNotice(message);
+        return { ok: false, message };
       }
 
       useGuestCartStore
         .getState()
         .addItem(productId, quantity, latestProduct.stock);
-      const message =
-        next < previous + quantity
-          ? "Jumlah disesuaikan dengan stok yang tersedia."
-          : "Produk ditambahkan ke keranjang.";
+      const limitedByStock = next < previous + quantity;
+      const message = limitedByStock
+        ? "Stok tidak cukup. Jumlah di keranjang disesuaikan dengan stok terbaru."
+        : "Produk ditambahkan ke keranjang.";
       setNotice(message);
-      setDrawerOpen(true);
-      return { ok: true, message };
+      return { ok: !limitedByStock, message };
     },
-    [applyActionResult, authReady, setDrawerOpen, userId],
+    [applyActionResult, authReady, userId],
   );
 
   const deleteItem = useCallback(
@@ -399,7 +414,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return { ok: false, message };
       }
 
-      useGuestCartStore.getState().setQuantity(productId, quantity, product.stock);
+      useGuestCartStore
+        .getState()
+        .setQuantity(productId, quantity, product.stock);
       if (quantity > product.stock) {
         const message = "Jumlah disesuaikan dengan stok terbaru.";
         setNotice(message);
@@ -419,6 +436,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalCo2eKg,
       totalPlasticAvoidedG,
       isReady: authReady && guestHydrated && hydrated,
+      isCountReady: authReady && guestHydrated,
       isSignedIn: Boolean(userId),
       isDrawerOpen,
       notice,

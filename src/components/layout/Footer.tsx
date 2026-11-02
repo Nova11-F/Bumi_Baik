@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="bg-forest-900 text-paper-50">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-4">
           <div>
             <Link href="/" className="flex items-center gap-2 text-paper-50">
               <Leaf className="h-6 w-6 text-forest-100" strokeWidth={1.5} aria-hidden="true" />

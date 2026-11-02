@@ -1,113 +1,41 @@
-"use client";
+import { getCurrentUser } from "@/lib/supabase/auth";
+import { HeaderClient, type HeaderAccount } from "./HeaderClient";
 
-import Link from "next/link";
-import { Leaf, Menu, Search, ShoppingBag, User } from "lucide-react";
-import { useState } from "react";
-import { SearchBox } from "@/components/search/SearchBox";
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { useCart } from "@/components/cart/CartProvider";
-import { MobileNav } from "./MobileNav";
-import { MobileSearch } from "./MobileSearch";
+export async function Header() {
+  const { supabase, user } = await getCurrentUser();
+  let account: HeaderAccount | null = null;
 
-export function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const { itemCount, setDrawerOpen } = useCart();
+  if (user) {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("full_name, role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  return (
-    <>
-      <header className="sticky top-0 z-40 border-b border-paper-200 bg-paper-50">
-        <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-1 items-center">
-            <Link href="/" className="flex items-center gap-2 text-forest-900">
-              <Leaf
-                className="h-6 w-6 text-forest-700"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
-              <span className="font-display text-xl font-semibold tracking-tight">
-                Bumi Baik
-              </span>
-            </Link>
-          </div>
+    if (error) {
+      console.error("Profil untuk navigasi belum berhasil dimuat.", error);
+    }
 
-          <nav
-            aria-label="Navigasi utama"
-            className="hidden items-center gap-8 md:flex"
-          >
-            <Link
-              href="/produk"
-              className="text-sm font-medium text-ink-900 hover:text-forest-700"
-            >
-              Produk
-            </Link>
-            <Link
-              href="/dampak"
-              className="text-sm font-medium text-ink-900 hover:text-forest-700"
-            >
-              Dampak
-            </Link>
-          </nav>
+    const profileName =
+      typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
+    const metadataName = user.user_metadata.full_name;
+    const name: string =
+      profileName ||
+      (typeof metadataName === "string" ? metadataName.trim() : "") ||
+      user.email ||
+      "Akun";
 
-          <div className="flex flex-1 items-center justify-end gap-1">
-            <SearchBox />
+    account = {
+      name,
+      initials: name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toLocaleUpperCase("id-ID") ?? "")
+        .join(""),
+      isAdmin: profile?.role === "admin",
+    };
+  }
 
-            <Link
-              href="/akun"
-              aria-label="Akun"
-              className="hidden h-11 w-11 items-center justify-center rounded-md text-ink-900 hover:bg-paper-100 md:flex"
-            >
-              <User className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label={`Buka keranjang, ${itemCount} item`}
-              className="relative flex h-11 w-11 items-center justify-center rounded-md text-ink-900 hover:bg-paper-100"
-            >
-              <ShoppingBag
-                className="h-5 w-5"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
-              <span
-                aria-live="polite"
-                aria-atomic="true"
-                className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-forest-700 px-1 text-sm leading-none text-paper-50"
-              >
-                {itemCount}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              aria-label="Cari produk"
-              className="flex h-11 w-11 items-center justify-center rounded-md text-ink-900 hover:bg-paper-100 md:hidden"
-            >
-              <Search
-                className="h-5 w-5"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Buka menu"
-              className="flex h-11 w-11 items-center justify-center rounded-md text-ink-900 hover:bg-paper-100 md:hidden"
-            >
-              <Menu className="h-6 w-6" strokeWidth={1.5} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <CartDrawer />
-    </>
-  );
+  return <HeaderClient account={account} />;
 }

@@ -168,7 +168,7 @@ export function SearchBox({
           onKeyDown={handleKeyDown}
           className={`h-11 rounded-md border border-paper-200 bg-white pl-10 text-base text-ink-900 placeholder:text-ink-400 focus:border-forest-700 focus:outline-none ${
             query ? "pr-10" : "pr-3"
-          } ${variant === "desktop" ? "w-56 lg:w-64" : "w-full"}`}
+          } ${variant === "desktop" ? "w-40 lg:w-56" : "w-full"}`}
         />
         {query && (
           <button

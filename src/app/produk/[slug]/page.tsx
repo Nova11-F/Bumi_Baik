@@ -147,7 +147,11 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             />
           </div>
 
-          <AddToCartButton productId={product.id} stock={product.stock} />
+          <AddToCartButton
+            productId={product.id}
+            productName={product.name}
+            stock={product.stock}
+          />
 
           <div className="mt-8 divide-y divide-paper-200 border-y border-paper-200">
             <details open className="group py-4">
