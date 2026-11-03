@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { PaymentMethodStep } from "@/components/checkout/PaymentMethodStep";
 import { FREE_SHIPPING_MIN_IDR } from "@/lib/constants";
 import { addressSchema } from "@/lib/validators/account";
 import { angka, rupiah } from "@/lib/format";
+import {
+  channelAmountError,
+  isAmountAllowed,
+  isOvoChannel,
+} from "@/lib/payments/channel-utils";
+import type { PaymentChannel } from "@/lib/server/payments/types";
 import type { Address } from "@/types";
 import type { PricingSummary } from "@/lib/server/pricing";
 
@@ -35,6 +42,9 @@ type CheckoutFlowProps = {
   quotes: Record<"jawa" | "luarJawa", PricingSummary>;
   hasUnavailableItems: boolean;
   email: string;
+  channels: PaymentChannel[];
+  channelsError: string | null;
+  defaultPhone: string;
 };
 
 const EMPTY_ADDRESS: AddressFormValues = {
@@ -54,8 +64,14 @@ export function CheckoutFlow({
   quotes,
   hasUnavailableItems,
   email,
+  channels,
+  channelsError,
+  defaultPhone,
 }: CheckoutFlowProps) {
   const defaultAddress = addresses.find((address) => address.is_default);
+  const initialChannel =
+    channels.find((channel) => isAmountAllowed(channel, quotes.jawa.totalIdr)) ??
+    channels[0];
   const [step, setStep] = useState(1);
   const [addressMode, setAddressMode] = useState<"saved" | "new">(
     defaultAddress ? "saved" : "new",
@@ -66,6 +82,10 @@ export function CheckoutFlow({
   const [shippingMethod, setShippingMethod] = useState<"jawa" | "luarJawa">(
     "jawa",
   );
+  const [channelCode, setChannelCode] = useState(initialChannel?.code ?? "");
+  const [customerPhone, setCustomerPhone] = useState(
+    defaultPhone || defaultAddress?.phone || "",
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +95,23 @@ export function CheckoutFlow({
 
   const selectedAddress = addresses.find((address) => address.id === addressId);
   const quote = quotes[shippingMethod];
-  const canSubmit = !hasUnavailableItems && items.length > 0;
+  const selectedChannel = channels.find(
+    (channel) => channel.code === channelCode,
+  );
+  const channelError = selectedChannel
+    ? channelAmountError(selectedChannel, quote.totalIdr)
+    : channels.length > 0
+      ? "Pilih metode pembayaran terlebih dahulu."
+      : "Metode pembayaran belum tersedia.";
+  const phoneRequired =
+    Boolean(selectedChannel && isOvoChannel(selectedChannel)) &&
+    !customerPhone.trim();
+  const canSubmit =
+    !hasUnavailableItems &&
+    items.length > 0 &&
+    Boolean(selectedChannel) &&
+    !channelError &&
+    !phoneRequired;
 
   function continueFromAddress() {
     setFieldErrors({});
@@ -104,12 +140,29 @@ export function CheckoutFlow({
   }
 
   async function submitCheckout() {
+    if (!selectedChannel) {
+      setErrorMessage("Pilih metode pembayaran terlebih dahulu.");
+      return;
+    }
+    if (channelError) {
+      setErrorMessage(channelError);
+      return;
+    }
+    if (phoneRequired) {
+      setErrorMessage("Nomor telepon wajib diisi untuk pembayaran OVO.");
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
     const body = {
       ...(addressMode === "saved" ? { addressId } : { newAddress }),
       shippingMethod,
+      channelCode,
+      ...(customerPhone.trim()
+        ? { customerPhone: customerPhone.trim() }
+        : {}),
       idempotencyKey,
     };
 
@@ -130,10 +183,7 @@ export function CheckoutFlow({
       };
 
       if (!response.ok || !result.paymentUrl) {
-        if (
-          result.error?.code === "PAYMENT_CREATE_FAILED" ||
-          result.error?.code === "PAYMENT_SAVE_FAILED"
-        ) {
+        if (result.error?.code === "PAYMENT_CREATE_FAILED") {
           setIdempotencyKey(crypto.randomUUID());
         }
         const shortages = result.error?.details?.items
@@ -160,6 +210,16 @@ export function CheckoutFlow({
   function updateAddress(field: keyof AddressFormValues, value: string) {
     setNewAddress((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
+  }
+
+  function continueToReview() {
+    if (!selectedChannel || channelError) {
+      const allowed = channels.find((channel) =>
+        isAmountAllowed(channel, quote.totalIdr),
+      );
+      setChannelCode(allowed?.code ?? "");
+    }
+    setStep(3);
   }
 
   function renderAddressField(
@@ -396,7 +456,7 @@ export function CheckoutFlow({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
+                  onClick={continueToReview}
                   className="inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900"
                 >
                   Tinjau pesanan
@@ -410,6 +470,27 @@ export function CheckoutFlow({
               <h2 id="review-heading" className="text-2xl text-forest-900">
                 Tinjau & bayar
               </h2>
+
+              <section aria-labelledby="payment-heading" className="mt-5">
+                <h3
+                  id="payment-heading"
+                  className="text-lg font-medium text-forest-900"
+                >
+                  Metode pembayaran
+                </h3>
+                <div className="mt-3">
+                  <PaymentMethodStep
+                    channels={channels}
+                    channelsError={channelsError}
+                    selectedCode={channelCode}
+                    totalIdr={quote.totalIdr}
+                    phone={customerPhone}
+                    onSelect={setChannelCode}
+                    onPhoneChange={setCustomerPhone}
+                  />
+                </div>
+              </section>
+
               <div className="mt-4 space-y-4 rounded-md border border-paper-200 p-4">
                 <div>
                   <h3 className="font-medium text-forest-900">
@@ -464,8 +545,8 @@ export function CheckoutFlow({
                 </button>
               </div>
               <p className="mt-3 text-sm text-ink-600">
-                Pembayaran diuji melalui halaman MOCK. Status pesanan hanya
-                berubah setelah webhook terverifikasi.
+                Status pesanan hanya berubah setelah pembayaran terverifikasi.
+                Anda akan diarahkan ke halaman pembayaran penyedia.
               </p>
             </section>
           )}

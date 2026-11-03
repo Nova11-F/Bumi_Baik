@@ -65,7 +65,12 @@ bumi-baik/
 │  │  ├─ 0002_rls.sql
 │  │  ├─ 0003_functions.sql
 │  │  ├─ 0004_grants.sql
-│  │  └─ 0005_payments_paymenku.sql
+│  │  ├─ 0005_checkout_payments.sql
+│  │  ├─ 0005_payments_paymenku.sql
+│  │  ├─ 0006_payment_status_extra.sql
+│  │  ├─ 0007_rpc_grants.sql
+│  │  ├─ 0008_webhook_event_processing.sql
+│  │  └─ 0009_webhook_event_claim_recovery.sql
 │  └─ seed.sql                 # 24 produk
 ├─ public/
 ├─ src/
@@ -271,7 +276,10 @@ create table webhook_events (
   provider text not null,
   event_id text not null,
   payload jsonb not null,
+  processing_status text not null default 'processed'
+    check (processing_status in ('processing', 'processed', 'failed')),
   received_at timestamptz not null default now(),
+  claimed_at timestamptz not null default now(),
   unique (provider, event_id)
 );
 ```
@@ -389,7 +397,11 @@ grant execute on function public.is_admin() to anon, authenticated, service_role
 grant execute on function public.reserve_stock(jsonb), public.release_stock(uuid) to service_role;
 ```
 
-### 4.5 Kolom pembayaran PaymenKu `0005_payments_paymenku.sql`
+### 4.5 RPC checkout `0005_checkout_payments.sql`
+
+Fungsi `security definer` yang dipanggil server: `create_checkout_order` (reserve stok + buat order), `save_checkout_payment` (catat payment + bersihkan cart), dan `cancel_pending_order` (batalkan order pending + kembalikan stok). File ini juga memuat fungsi lama `process_payment_event` dan `expire_pending_orders`; keduanya tidak dipakai aplikasi. Status pembayaran hanya diubah lewat `applyPaymentEvent`.
+
+### 4.6 Kolom pembayaran PaymenKu `0005_payments_paymenku.sql`
 
 ```sql
 -- Nominal dasar tetap di payments.amount_idr (= orders.total_idr).
@@ -401,6 +413,14 @@ alter table public.payments
   add column if not exists attempt      integer not null default 1;
 
 create index if not exists payments_order_idx on public.payments (order_id);
+```
+
+### 4.7 Status pembayaran tambahan `0006_payment_status_extra.sql`
+
+```sql
+-- Enum payment_status awal hanya: initiated, paid, failed, expired.
+alter type public.payment_status add value if not exists 'cancelled';
+alter type public.payment_status add value if not exists 'refunded';
 ```
 
 ---
@@ -477,10 +497,14 @@ export async function queryProducts(sp: CatalogParams) {
 export interface PaymentChannel {
   code: string;                 // mis. "qris", "bca_va", "dana", "indomaret"
   name: string;
-  group: string;                // "QRIS" | "Virtual Account" | "E-Wallet" | "Convenience Store"
+  type: string;                 // "va" | "qris" | "ewallet" | "cstore" (selalu ada)
+  group: string;                // untuk tampilan; API kadang mengirim null → turunkan dari `type`
+  flowType: string;             // "direct" | "redirect"
   feeMode: "merchant" | "customer" | "split";
+  feeFlat: number;              // rupiah
+  feePercent: number;           // persen, mis. 0.7 atau 3
   minAmount: number;            // rupiah
-  maxAmount: number;
+  maxAmount: number | null;     // null = TANPA batas atas (jangan diubah menjadi 0)
   iconUrl?: string;
 }
 
@@ -549,12 +573,14 @@ Dokumentasi resmi: `docs.paymenku.com` dan repo `github.com/paymenku/docs-paymen
 |---|---|
 | Base URL | `https://paymenku.com/api/v1` (live dan sandbox sama; dibedakan oleh kunci) |
 | Autentikasi | Header `Authorization: Bearer <kunci>`. `sk_test_*` = sandbox (tanpa dana nyata, tanpa KYC). `sk_live_*` = produksi, **hanya aktif setelah KYC disetujui** |
+| Header autentikasi | **Terverifikasi (uji nyata sandbox, 3 Nov 2026):** `Authorization: Bearer <kunci>` → HTTP 200; `X-Api-Key: <kunci>` → HTTP 401 "API Token required". Teks "header X-Api-Key" di dashboard keliru; pakai Bearer |
 | Daftar kanal | `GET /payment-channels` (kanal aktif per merchant, beserta `fee_mode`, `min_amount`, `max_amount`). **Jangan hardcode kode kanal** |
 | Buat transaksi | `POST /transaction/create` dengan `channel_code`, `amount` (angka), `reference_id`, `customer_name`, `customer_email`, `return_url`, opsional `customer_phone`, `order_items[{name,quantity}]` |
 | Respons buat transaksi | `data.trx_id`, `data.reference_id`, `data.amount` (**string desimal**, mis. `"15305.00"`), `data.status`, `data.pay_url`, `data.payment_info`. Sandbox menambah `sandbox_mode`, `sandbox_notice`, `simulator_url` |
 | `payment_info` per kanal | QRIS: `qr_url`, `qr_string`, `expiration_date`. VA: `bank`, `va_number`, `expiration_date`. E-wallet: `checkout_url`. Gerai ritel: `store`, `payment_code` (bukan `pay_code`) |
+| Kanal nyata | Terlihat di uji: 12 VA (BCA, BRI, BNI, CIMB, Danamon, BSI, Mandiri, Permata, Bank Neo, Maybank, Muamalat, OCBC), QRIS, DANA, OVO, LinkAja, ShopeePay, Indomaret, Alfamart. Field per kanal: `code,name,type,group,flow_type,icon,fee_mode,fee_flat,fee_percent,min_amount,max_amount`. `type` ∈ {va,qris,ewallet,cstore}; `group` bisa `null`. Semua `fee_mode` = `merchant` (pelanggan tidak ditambah biaya) |
 | Fee | `fee_mode`: `merchant` (pelanggan bayar `amount`), `customer` (pelanggan bayar `amount + fee`), `split`. Nominal pelanggan dibulatkan ke rupiah utuh. Berbeda per kanal |
-| Batas nominal | QRIS Rp1.000–10 jt; VA Rp10.000 ke atas; e-wallet Rp1.000–20 jt; gerai ritel Rp15.000–2,5 jt. Nominal di luar batas → HTTP 422 |
+| Batas nominal | **Selalu baca dari API, jangan hardcode.** Hasil uji nyata: `max_amount` bernilai **`null`** (tanpa batas) untuk hampir semua kanal, hanya Indomaret/Alfamart yang 2.500.000; minimum QRIS 1.000, VA 10.000, **e-wallet (DANA, OVO, LinkAja, ShopeePay) 10.000**, gerai ritel 15.000. Nominal di luar batas → HTTP 422 |
 | Masa berlaku | QRIS ± 15 menit; VA dan gerai ritel ± 24 jam. Baca `expiration_date`, jangan hardcode |
 | OVO | `customer_phone` wajib |
 | Cek status | `GET /check-status/{order_id}` (menerima `trx_id` **atau** `reference_id`). Untuk rekonsiliasi, bukan pengganti webhook |
@@ -569,10 +595,9 @@ Dokumentasi resmi: `docs.paymenku.com` dan repo `github.com/paymenku/docs-paymen
 
 | Hal | Asumsi sementara | Cara memastikan |
 |---|---|---|
-| Encoding tanda tangan | Hex huruf kecil (opsional prefiks `sha256=`) | Halaman Webhook; atau bandingkan dengan header di uji sandbox |
-| Format timestamp dan toleransi replay | Detik epoch, toleransi 5 menit (`WEBHOOK_TOLERANCE_SECONDS`) | Halaman Webhook |
-| Nama field payload webhook | `trx_id`, `reference_id`, `status`, `amount`, `paid_at`, boleh dibungkus `data` | Lihat `webhook_events.payload` setelah webhook sandbox pertama |
-| Asal webhook secret | Dari dashboard merchant, terpisah dari API key | Dashboard (Settings) |
+| Field payload `amount`, `paid_at`, `reference_id` | Bentuk field belum terkonfirmasi | Periksa `webhook_events.payload` setelah webhook sandbox |
+| Endpoint batalkan transaksi | Ada (SDK punya `cancel`), path belum dipastikan | `openapi.yaml`, tag "Aksi Transaksi" |
+| Asal webhook secret | **Terverifikasi (dashboard):** Merchant / Credentials, ada *sandbox webhook secret* yang **terpisah** dari secret production, dan URL webhook sandbox juga terpisah dari URL production | Dashboard → Merchant / Credentials (mode Sandbox) |
 | Endpoint batalkan transaksi | Ada (SDK punya `cancel`), path belum dipastikan | `openapi.yaml`, tag "Aksi Transaksi" |
 
 ```ts
@@ -614,9 +639,16 @@ export const parseIdr = (v: string | number) => Math.round(Number(v));
 export class PaymenkuProvider implements PaymentProvider {
   async listChannels() {
     const data = await call("/payment-channels");
+    const GROUP_BY_TYPE: Record<string, string> = {
+      qris: "QRIS", va: "Virtual Account", ewallet: "E-Wallet", cstore: "Gerai Ritel",
+    };
     return (data as any[]).map((c) => ({
-      code: c.code, name: c.name, group: c.group, feeMode: c.fee_mode,
-      minAmount: Number(c.min_amount), maxAmount: Number(c.max_amount), iconUrl: c.icon,
+      code: c.code, name: c.name, type: c.type, flowType: c.flow_type,
+      group: GROUP_BY_TYPE[c.type] ?? (c.group || "Lainnya"),   // c.group bisa null/kosong
+      feeMode: c.fee_mode, feeFlat: Number(c.fee_flat ?? 0), feePercent: Number(c.fee_percent ?? 0),
+      minAmount: Number(c.min_amount ?? 0),
+      maxAmount: c.max_amount == null ? null : Number(c.max_amount),  // null = tanpa batas
+      iconUrl: c.icon,
     }));
   }
 
@@ -698,7 +730,7 @@ Body (Zod): `addressId | newAddress`, `shippingMethod`, `channelCode`, `idempote
 2. Validasi body (Zod)
 3. Idempotensi: jika orders.idempotency_key sudah ada → kembalikan order/payment yang sama
 4. Muat keranjang → produk TERBARU → hitung di server: subtotal, ongkir, total, total_co2e
-5. provider.listChannels() → pastikan channelCode ada DAN min_amount <= total <= max_amount
+5. provider.listChannels() → pastikan channelCode ada DAN total >= min_amount DAN (max_amount == null ATAU total <= max_amount)
      - gagal → 422 dengan pesan jelas (mis. "Indomaret maksimal Rp 2.500.000")
      - OVO → wajib nomor telepon
 6. RPC reserve_stock(items)  — gagal → 409 + daftar produk bermasalah
@@ -721,8 +753,11 @@ Body (Zod): `addressId | newAddress`, `shippingMethod`, `channelCode`, `idempote
 ```
 1. Baca RAW body (await req.text()) — jangan req.json() sebelum verifikasi
 2. provider.verifyAndParseWebhook(raw, headers) → 401 jika signature salah/timestamp kedaluwarsa; 400 jika payload tidak dikenal
-3. Insert ke webhook_events (provider, event_id = `${trx_id}:${status}`)
-     - konflik unique → sudah diproses → kembalikan 200 (idempoten)
+3. Klaim `webhook_events` dengan status `processing`
+     - status `processed` → duplikat sukses, kembalikan 200
+     - status `failed` → klaim ulang dan proses lagi
+     - status `processing` berumur kurang dari 2 menit → proses masih berjalan; sync mengembalikan 409
+     - status `processing` berumur lebih dari 2 menit → ambil alih atomik; hanya satu pemanggil menang
 4. applyPaymentEvent(event)  ← fungsi bersama (webhook, sinkronisasi, cron):
      a. Ambil payments by (provider='paymenku', provider_ref = trx_id); tak ada → 200 + log
      b. Jika status 'paid': validasi amountIdr == payments.payable_idr (bila ada di payload)
@@ -733,7 +768,9 @@ Body (Zod): `addressId | newAddress`, `shippingMethod`, `channelCode`, `idempote
      d. Abaikan transisi mundur (mis. paid → expired)
      e. Pembayaran TERLAMBAT (order sudah 'expired'/'cancelled' lalu 'paid' datang): tandai payments.status='paid',
         biarkan order apa adanya, dan tampilkan di admin untuk refund manual (stok sudah dikembalikan)
-5. Kembalikan 200 secepat mungkin
+5. Tandai `processed` hanya setelah seluruh pemrosesan sukses; saat gagal tandai `failed`.
+6. Kembalikan 500 saat gagal agar PaymenKu mencoba ulang; 200 hanya setelah sukses atau duplikat sukses.
+   Pemrosesan dibatasi 25 detik; fetch PaymenKu dibatasi 10 detik.
 ```
 
 **Rekonsiliasi (jalur kedua, server-ke-server)**
@@ -767,7 +804,7 @@ pending ──paid──▶ paid ──admin──▶ shipped ──admin──�
 | POST | `/api/cart/hydrate` | Publik | Id produk → data terbaru (harga, stok) |
 | GET | `/api/payment-channels` | Login | Kanal pembayaran aktif + batas nominal (cache) |
 | POST | `/api/checkout` | Login | Buat order + transaksi PaymenKu |
-| POST | `/api/orders/[id]/sync-payment` | Login (pemilik) | Rekonsiliasi status ke PaymenKu |
+| POST | `/api/orders/[id]/sync-payment` | Login (pemilik) | Rekonsiliasi status ke PaymenKu; 409 bila event masih diproses, 429 menyertakan `Retry-After` |
 | POST | `/api/payments/paymenku/webhook` | Signature | Update status bayar |
 | GET | `/api/cron/expire-orders` | `CRON_SECRET` | Kedaluwarsakan pesanan |
 

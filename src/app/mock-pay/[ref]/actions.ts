@@ -6,11 +6,14 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/auth";
 import {
+  applyPaymentEvent,
+  createSupabasePaymentEventStore,
+} from "@/lib/server/payments/apply-event";
+import {
   isMockPaymentEnabled,
   MockProvider,
 } from "@/lib/server/payments/mock";
 import { handlePaymentWebhook } from "@/lib/server/payments/webhook";
-import { createPaymentWebhookDependencies } from "@/lib/server/payments/webhook-adapter";
 import type { FormState } from "@/lib/validators/common";
 
 const mockPaymentSchema = z.object({
@@ -80,13 +83,19 @@ export async function submitMockPayment(
       ? { paid_at: new Date().toISOString() }
       : {}),
   });
+  const store = createSupabasePaymentEventStore(admin);
   const response = await handlePaymentWebhook(
-    new Request("http://internal/api/payments/paymentku/webhook", {
+    new Request("http://internal/api/payments/paymenku/webhook", {
       method: "POST",
       headers: { "x-mock-signature": provider.signWebhook(rawBody) },
       body: rawBody,
     }),
-    createPaymentWebhookDependencies(),
+    {
+      providerName: "mock",
+      verifyAndParseWebhook: (body, headers) =>
+        provider.verifyAndParseWebhook(body, headers),
+      applyEvent: (event) => applyPaymentEvent(store, "mock", event),
+    },
   );
 
   if (!response.ok) {

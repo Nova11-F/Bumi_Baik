@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const phoneSchema = z
+export const phoneSchema = z
   .string()
   .trim()
   .min(8, "Nomor telepon minimal 8 karakter.")

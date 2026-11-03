@@ -16,7 +16,13 @@ export type OrderStatus =
   | "cancelled"
   | "expired";
 
-export type PaymentStatus = "initiated" | "paid" | "failed" | "expired";
+export type PaymentStatus =
+  | "initiated"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "cancelled"
+  | "refunded";
 
 export type Category = {
   id: number;
@@ -130,6 +136,10 @@ export type Payment = {
   provider_ref: string | null;
   status: PaymentStatus;
   amount_idr: number;
+  payable_idr: number | null;
+  channel_code: string | null;
+  expires_at: string | null;
+  attempt: number;
   payment_url: string | null;
   raw_payload: Json | null;
   created_at: string;
@@ -141,5 +151,7 @@ export type WebhookEvent = {
   provider: string;
   event_id: string;
   payload: Json;
+  processing_status: "processing" | "processed" | "failed";
   received_at: string;
+  claimed_at: string;
 };

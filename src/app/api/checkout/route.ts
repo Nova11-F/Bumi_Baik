@@ -3,9 +3,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { calculatePricing } from "@/lib/server/pricing";
-import { getPaymentProvider } from "@/lib/server/payments";
+import {
+  getPaymentProvider,
+  getPaymentProviderName,
+} from "@/lib/server/payments";
+import { listPaymentChannels } from "@/lib/server/payments/channels";
+import type {
+  PaymentChannel,
+  PaymentProvider,
+  PaymentProviderName,
+} from "@/lib/server/payments/types";
+import {
+  channelAmountError,
+  isOvoChannel,
+} from "@/lib/payments/channel-utils";
 import { checkoutRequestSchema } from "@/lib/validators/checkout";
-import type { Address, Product } from "@/types";
+import type { Address, Json, Product } from "@/types";
 
 type CheckoutCartItem = {
   product_id: string;
@@ -18,6 +31,10 @@ type Shortage = {
   requested: number;
   available: number;
 };
+
+function toJson(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value ?? null)) as Json;
+}
 
 function errorResponse(
   status: number,
@@ -75,6 +92,8 @@ async function responseForExistingCheckout(
     .from("payments")
     .select("payment_url")
     .eq("order_id", order.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (paymentError) {
@@ -106,7 +125,6 @@ async function compensateFailedCheckout(
     p_order_id: orderId,
   });
   if (error) {
-    console.error("Checkout compensation failed", { orderId, error });
     throw new Error(
       "Pesanan gagal dibatalkan dan stok belum dapat dipulihkan.",
       {
@@ -147,8 +165,10 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
   const input = parsed.data;
-  let provider: ReturnType<typeof getPaymentProvider>;
+  let provider: PaymentProvider;
+  let providerName: PaymentProviderName;
   try {
+    providerName = getPaymentProviderName();
     provider = getPaymentProvider();
   } catch (error) {
     console.error("Payment provider configuration is invalid", error);
@@ -280,6 +300,44 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let channels: PaymentChannel[];
+  try {
+    channels = await listPaymentChannels(provider, providerName);
+  } catch (error) {
+    console.error("Payment channels could not be loaded", error);
+    return errorResponse(
+      503,
+      "PAYMENT_CHANNELS_UNAVAILABLE",
+      "Metode pembayaran belum tersedia. Coba lagi beberapa saat lagi.",
+    );
+  }
+
+  const channel = channels.find(
+    (candidate) => candidate.code === input.channelCode,
+  );
+  if (!channel) {
+    return errorResponse(
+      422,
+      "PAYMENT_CHANNEL_INVALID",
+      "Metode pembayaran yang dipilih tidak tersedia.",
+    );
+  }
+
+  const amountError = channelAmountError(channel, pricing.totalIdr);
+  if (amountError) {
+    return errorResponse(422, "PAYMENT_CHANNEL_INVALID", amountError);
+  }
+
+  const customerPhone =
+    input.customerPhone || profile?.phone || shippingAddress.phone;
+  if (isOvoChannel(channel) && !customerPhone) {
+    return errorResponse(
+      422,
+      "CUSTOMER_PHONE_REQUIRED",
+      "Nomor telepon wajib diisi untuk pembayaran OVO.",
+    );
+  }
+
   const addressSnapshot = {
     recipient: shippingAddress.recipient,
     phone: shippingAddress.phone,
@@ -372,28 +430,36 @@ export async function POST(request: NextRequest) {
   try {
     payment = await provider.createPayment({
       orderId,
-      orderNumber,
+      referenceId: orderNumber,
+      channelCode: input.channelCode,
       amountIdr: pricing.totalIdr,
       customer: {
         name: profile?.full_name ?? addressSnapshot.recipient,
         email: user.email ?? "",
-        phone: profile?.phone ?? addressSnapshot.phone,
+        ...(customerPhone ? { phone: customerPhone } : {}),
       },
       items: orderItems.map((item) => ({
         name: item.product_name,
-        price: item.unit_price_idr,
         quantity: item.quantity,
       })),
       returnUrl: new URL(`/pesanan/${orderId}`, request.url).toString(),
-      notifyUrl: new URL(
-        "/api/payments/paymentku/webhook",
-        request.url,
-      ).toString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
   } catch (error) {
-    await compensateFailedCheckout(admin, orderId);
     console.error("Payment provider failed to create a payment", error);
+    try {
+      await compensateFailedCheckout(admin, orderId);
+    } catch (compensationError) {
+      console.error("Checkout compensation failed", {
+        orderId,
+        orderNumber,
+        compensationError,
+      });
+      return errorResponse(
+        500,
+        "CHECKOUT_COMPENSATION_FAILED",
+        `Pesanan ${orderNumber} belum berhasil dibatalkan. Simpan nomor pesanan ini dan hubungi admin.`,
+      );
+    }
     return errorResponse(
       502,
       "PAYMENT_CREATE_FAILED",
@@ -401,29 +467,98 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { error: paymentInsertError } = await admin.rpc(
-    "save_checkout_payment",
-    {
-      p_order_id: orderId,
-      p_provider: process.env.PAYMENT_PROVIDER ?? "mock",
-      p_provider_ref: payment.providerRef,
-      p_amount_idr: pricing.totalIdr,
-      p_payment_url: payment.paymentUrl,
-    },
-  );
+  const paymentValues = {
+    order_id: orderId,
+    provider: providerName,
+    provider_ref: payment.providerRef,
+    status: "initiated" as const,
+    amount_idr: pricing.totalIdr,
+    payable_idr: payment.payableAmountIdr,
+    channel_code: input.channelCode,
+    expires_at: payment.expiresAt?.toISOString() ?? null,
+    attempt: 1,
+    payment_url: payment.payUrl,
+    raw_payload: toJson(payment.raw),
+  };
 
-  if (paymentInsertError) {
-    await compensateFailedCheckout(admin, orderId);
-    console.error("Payment record creation failed", paymentInsertError);
+  let persisted = false;
+  const { error: savePaymentError } = await admin.rpc("save_checkout_payment", {
+    p_order_id: orderId,
+    p_provider: providerName,
+    p_provider_ref: payment.providerRef,
+    p_amount_idr: pricing.totalIdr,
+    p_payment_url: payment.payUrl,
+  });
+
+  if (!savePaymentError) {
+    persisted = true;
+    const { error: detailError } = await admin
+      .from("payments")
+      .update({
+        payable_idr: paymentValues.payable_idr,
+        channel_code: paymentValues.channel_code,
+        expires_at: paymentValues.expires_at,
+        attempt: paymentValues.attempt,
+        raw_payload: paymentValues.raw_payload,
+      })
+      .eq("provider", providerName)
+      .eq("provider_ref", payment.providerRef);
+
+    if (detailError) {
+      console.error("Payment details could not be saved", {
+        orderId,
+        providerRef: payment.providerRef,
+        error: detailError,
+      });
+    }
+  } else {
+    console.error(
+      "Checkout payment RPC failed; attempting a direct payment insert",
+      { orderId, providerRef: payment.providerRef, error: savePaymentError },
+    );
+
+    const { error: insertError } = await admin
+      .from("payments")
+      .insert(paymentValues);
+
+    if (!insertError) {
+      persisted = true;
+      const { error: cartError } = await admin
+        .from("cart_items")
+        .delete()
+        .eq("user_id", user.id)
+        .in("product_id", productIds);
+
+      if (cartError) {
+        console.error("Cart could not be cleared after checkout", {
+          orderId,
+          error: cartError,
+        });
+      }
+    } else {
+      console.error(
+        "PAYMENT_PERSISTENCE_FAILED_RECONCILIATION_REQUIRED",
+        {
+          orderId,
+          orderNumber,
+          providerRef: payment.providerRef,
+          providerError: savePaymentError,
+          insertError,
+        },
+      );
+    }
+  }
+
+  if (!persisted) {
     return errorResponse(
       502,
       "PAYMENT_SAVE_FAILED",
-      "Pembayaran belum berhasil disimpan. Stok telah dikembalikan; silakan coba lagi.",
+      `Pembayaran sudah dibuat tetapi belum tercatat. Simpan nomor pesanan ${orderNumber} dan hubungi admin untuk rekonsiliasi.`,
     );
   }
 
   return NextResponse.json(
-    { orderId, paymentUrl: payment.paymentUrl },
+    { orderId, paymentUrl: payment.payUrl },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );
 }

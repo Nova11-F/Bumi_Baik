@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CheckoutFlow } from "@/components/checkout/CheckoutFlow";
+import {
+  getPaymentProvider,
+  getPaymentProviderName,
+} from "@/lib/server/payments";
+import { listPaymentChannels } from "@/lib/server/payments/channels";
+import type { PaymentChannel } from "@/lib/server/payments/types";
 import { calculatePricing } from "@/lib/server/pricing";
 import { requireUser } from "@/lib/supabase/auth";
 import type { Address, Product } from "@/types";
@@ -25,7 +31,7 @@ export default async function CheckoutPage() {
   if (!cartData?.length) redirect("/keranjang");
 
   const productIds = cartData.map((item) => item.product_id);
-  const [productsResult, addressesResult] = await Promise.all([
+  const [productsResult, addressesResult, profileResult] = await Promise.all([
     supabase
       .from("products")
       .select(
@@ -41,12 +47,29 @@ export default async function CheckoutPage() {
       .eq("user_id", user.id)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle(),
   ]);
 
-  if (productsResult.error || addressesResult.error) {
+  if (productsResult.error || addressesResult.error || profileResult.error) {
     throw new Error("Data checkout belum berhasil dimuat.", {
-      cause: productsResult.error ?? addressesResult.error,
+      cause:
+        productsResult.error ??
+        addressesResult.error ??
+        profileResult.error,
     });
+  }
+
+  let channels: PaymentChannel[] = [];
+  let channelsError: string | null = null;
+  try {
+    channels = await listPaymentChannels(
+      getPaymentProvider(),
+      getPaymentProviderName(),
+    );
+  } catch (error) {
+    console.error("Payment channels could not be loaded for checkout", error);
+    channelsError =
+      "Metode pembayaran belum tersedia. Muat ulang halaman beberapa saat lagi.";
   }
 
   const products = (productsResult.data ?? []) as Product[];
@@ -80,6 +103,9 @@ export default async function CheckoutPage() {
       quotes={quotes}
       hasUnavailableItems={validItems.length !== items.length}
       email={user.email ?? ""}
+      channels={channels}
+      channelsError={channelsError}
+      defaultPhone={profileResult.data?.phone ?? ""}
     />
   );
 }

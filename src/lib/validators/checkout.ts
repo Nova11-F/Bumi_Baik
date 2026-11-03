@@ -1,11 +1,13 @@
 import { z } from "zod";
-import { addressSchema } from "./account";
+import { addressSchema, phoneSchema } from "./account";
 
 export const checkoutRequestSchema = z
   .object({
     addressId: z.string().uuid().optional(),
     newAddress: addressSchema.optional(),
     shippingMethod: z.enum(["jawa", "luarJawa"]),
+    channelCode: z.string().trim().min(1, "Pilih metode pembayaran."),
+    customerPhone: phoneSchema.optional(),
     idempotencyKey: z.string().uuid(),
   })
   .refine((input) => Boolean(input.addressId) !== Boolean(input.newAddress), {

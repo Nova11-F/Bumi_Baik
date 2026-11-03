@@ -8,15 +8,19 @@ import {
 const provider = new MockProvider("test-secret");
 const paymentRef = "b7997d5e-1ffc-4726-9aa4-a1ec4f1b9be0";
 
-function requestForEvent(amount: number, eventId = "event-1") {
+function requestForEvent(
+  amount: number,
+  eventId = "event-1",
+  status = "paid",
+) {
   const rawBody = JSON.stringify({
     event_id: eventId,
     transaction_id: paymentRef,
-    status: "paid",
+    status,
     amount,
   });
 
-  return new Request("http://localhost/api/payments/paymentku/webhook", {
+  return new Request("http://localhost/api/payments/paymenku/webhook", {
     method: "POST",
     headers: { "x-mock-signature": provider.signWebhook(rawBody) },
     body: rawBody,
@@ -30,17 +34,16 @@ function dependencies(
     providerName: "mock",
     verifyAndParseWebhook: (rawBody, headers) =>
       provider.verifyAndParseWebhook(rawBody, headers),
-    findExpectedAmount: vi.fn(async () => 149_000),
-    processEvent: vi.fn(async () => "processed" as const),
+    applyEvent: vi.fn(async () => "processed" as const),
     ...overrides,
   };
 }
 
 describe("handlePaymentWebhook", () => {
-  it("rejects an invalid signature before looking up or changing a payment", async () => {
+  it("rejects an invalid signature before applying an event", async () => {
     const deps = dependencies();
     const request = new Request(
-      "http://localhost/api/payments/paymentku/webhook",
+      "http://localhost/api/payments/paymenku/webhook",
       {
         method: "POST",
         headers: { "x-mock-signature": "wrong" },
@@ -56,38 +59,58 @@ describe("handlePaymentWebhook", () => {
     const response = await handlePaymentWebhook(request, deps);
 
     expect(response.status).toBe(401);
-    expect(deps.findExpectedAmount).not.toHaveBeenCalled();
-    expect(deps.processEvent).not.toHaveBeenCalled();
+    expect(deps.applyEvent).not.toHaveBeenCalled();
   });
 
-  it("rejects a mismatched amount without recording the event", async () => {
+  it("returns 500 when event processing fails", async () => {
     const deps = dependencies({
-      findExpectedAmount: vi.fn(async () => 150_000),
+      applyEvent: vi.fn(async () => {
+        throw new Error("PAYMENT_STATUS_UPDATE_FAILED");
+      }),
     });
 
     const response = await handlePaymentWebhook(requestForEvent(149_000), deps);
 
-    expect(response.status).toBe(400);
-    expect(deps.processEvent).not.toHaveBeenCalled();
+    expect(response.status).toBe(500);
   });
 
-  it("does not apply the same event twice", async () => {
-    const eventIds = new Set<string>();
-    let effects = 0;
+  it("returns 500 when the payment amount does not match", async () => {
     const deps = dependencies({
-      processEvent: vi.fn(async (event) => {
-        if (eventIds.has(event.eventId)) return "duplicate";
-        eventIds.add(event.eventId);
-        effects += 1;
-        return "processed";
+      applyEvent: vi.fn(async () => {
+        throw new Error("PAYMENT_AMOUNT_MISMATCH");
       }),
     });
 
-    const first = await handlePaymentWebhook(requestForEvent(149_000), deps);
-    const second = await handlePaymentWebhook(requestForEvent(149_000), deps);
+    const response = await handlePaymentWebhook(requestForEvent(149_000), deps);
 
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(effects).toBe(1);
+    expect(response.status).toBe(500);
+  });
+
+  it("returns duplicate for an event that was already processed", async () => {
+    const deps = dependencies({
+      applyEvent: vi.fn(async () => "duplicate" as const),
+    });
+
+    const response = await handlePaymentWebhook(requestForEvent(149_000), deps);
+    const body = (await response.json()) as { result: string };
+
+    expect(response.status).toBe(200);
+    expect(body.result).toBe("duplicate");
+  });
+
+  it("rejects a malformed payload", async () => {
+    const rawBody = JSON.stringify({ event_id: "event-1" });
+    const request = new Request(
+      "http://localhost/api/payments/paymenku/webhook",
+      {
+        method: "POST",
+        headers: { "x-mock-signature": provider.signWebhook(rawBody) },
+        body: rawBody,
+      },
+    );
+
+    const response = await handlePaymentWebhook(request, dependencies());
+
+    expect(response.status).toBe(400);
   });
 });

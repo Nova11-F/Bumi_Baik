@@ -55,7 +55,7 @@ describe("MockProvider webhook signatures", () => {
 
   it("disables mock payments when another provider is selected", () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("PAYMENT_PROVIDER", "paymentku");
+    vi.stubEnv("PAYMENT_PROVIDER", "paymenku");
 
     expect(isMockPaymentEnabled()).toBe(false);
   });
