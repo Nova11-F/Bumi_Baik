@@ -1,7 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
-import { MapPin, Pencil, Plus, Star, Trash2, type LucideIcon } from "lucide-react";
+import {
+  MapPin,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import {
   createAddressAction,
   deleteAddressAction,
@@ -49,7 +56,7 @@ function AddressMutationForm({
         <button
           type="submit"
           disabled={pending}
-          className={`inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-ink-400 ${
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-ink-600 ${
             danger
               ? "border-danger text-danger hover:bg-paper-100"
               : "border-forest-700 text-forest-700 hover:bg-forest-100"
@@ -66,7 +73,10 @@ function AddressMutationForm({
 
 export function AddressManager({ addresses }: { addresses: Address[] }) {
   return (
-    <section aria-labelledby="address-heading" className="mt-10 border-t border-paper-200 pt-8">
+    <section
+      aria-labelledby="address-heading"
+      className="mt-10 border-t border-paper-200 pt-8"
+    >
       <h2
         id="address-heading"
         className="font-display text-2xl font-semibold leading-tight text-forest-900"
@@ -74,7 +84,8 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
         Alamat pengiriman
       </h2>
       <p className="mt-2 text-base leading-relaxed text-ink-600">
-        Simpan alamat untuk mempercepat checkout. Satu alamat dapat dijadikan alamat utama.
+        Simpan alamat untuk mempercepat checkout. Satu alamat dapat dijadikan
+        alamat utama.
       </p>
 
       <details className="group mt-5 rounded-md border border-paper-200 bg-paper-50">
@@ -98,7 +109,9 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
             strokeWidth={1.5}
             aria-hidden="true"
           />
-          <p className="mt-3 font-medium text-ink-900">Belum ada alamat tersimpan.</p>
+          <p className="mt-3 font-medium text-ink-900">
+            Belum ada alamat tersimpan.
+          </p>
           <p className="mt-1 text-sm text-ink-600">
             Tambahkan alamat pengiriman agar checkout berikutnya lebih cepat.
           </p>
@@ -120,7 +133,8 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
               </div>
               <p className="mt-1 text-sm text-ink-600">{address.phone}</p>
               <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                {address.street}, {address.city}, {address.province} {address.postal_code}
+                {address.street}, {address.city}, {address.province}{" "}
+                {address.postal_code}
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -145,7 +159,11 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
 
               <details className="group mt-4 border-t border-paper-200 pt-4">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-forest-700 [&::-webkit-details-marker]:hidden">
-                  <Pencil className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                  <Pencil
+                    className="h-4 w-4"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
                   Ubah alamat
                 </summary>
                 <div className="mt-4">

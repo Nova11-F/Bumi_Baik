@@ -10,6 +10,7 @@ import type { Address, Profile } from "@/types";
 export const metadata: Metadata = {
   title: "Akun Saya",
   description: "Kelola profil, password, dan alamat pengiriman Bumi Baik.",
+  robots: { index: false, follow: false },
 };
 
 type AkunPageProps = {
@@ -29,7 +30,9 @@ export default async function AkunPage({ searchParams }: AkunPageProps) {
       .maybeSingle(),
     supabase
       .from("addresses")
-      .select("id, user_id, recipient, phone, street, city, province, postal_code, is_default, created_at")
+      .select(
+        "id, user_id, recipient, phone, street, city, province, postal_code, is_default, created_at",
+      )
       .eq("user_id", user.id)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true })
@@ -65,7 +68,10 @@ export default async function AkunPage({ searchParams }: AkunPageProps) {
         Lihat pesanan saya
       </Link>
 
-      <section aria-labelledby="profile-heading" className="mt-8 rounded-md border border-paper-200 bg-paper-50 p-5 sm:p-6">
+      <section
+        aria-labelledby="profile-heading"
+        className="mt-8 rounded-md border border-paper-200 bg-paper-50 p-5 sm:p-6"
+      >
         <h2
           id="profile-heading"
           className="font-display text-2xl font-semibold leading-tight text-forest-900"
@@ -73,7 +79,8 @@ export default async function AkunPage({ searchParams }: AkunPageProps) {
           Profil
         </h2>
         <p className="mt-2 text-base leading-relaxed text-ink-600">
-          Nama dan nomor telepon dipakai untuk mempercepat pengisian data pengiriman.
+          Nama dan nomor telepon dipakai untuk mempercepat pengisian data
+          pengiriman.
         </p>
         <div className="mt-5">
           <ProfileForm profile={profileResult.data} email={user.email ?? ""} />

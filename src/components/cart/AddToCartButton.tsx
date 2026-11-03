@@ -76,7 +76,7 @@ export function AddToCartButton({
         type="button"
         onClick={() => void handleAdd()}
         disabled={stock === 0 || !isReady || pending}
-        className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400"
+        className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
       >
         {stock === 0 ? (
           "Stok habis"

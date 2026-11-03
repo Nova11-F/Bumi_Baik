@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/supabase/auth";
 export const metadata: Metadata = {
   title: "Pembayaran MOCK",
   description: "Halaman simulasi pembayaran untuk pengujian.",
+  robots: { index: false, follow: false },
 };
 
 export default async function MockPayPage({

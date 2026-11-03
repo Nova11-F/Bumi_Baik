@@ -171,7 +171,7 @@ export function SearchBox({
             if (trimmedQuery.length >= 2) setOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          className={`h-11 rounded-md border border-paper-200 bg-white pl-10 text-base text-ink-900 placeholder:text-ink-400 focus:border-forest-700 focus:outline-none ${
+          className={`h-11 rounded-md border border-paper-200 bg-white pl-10 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 ${
             query ? "pr-10" : "pr-3"
           } ${variant === "desktop" ? "w-40 lg:w-56" : "w-full"}`}
         />

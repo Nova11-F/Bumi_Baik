@@ -8,6 +8,7 @@ import type { Order } from "@/types";
 export const metadata: Metadata = {
   title: "Pesanan Saya",
   description: "Riwayat dan status pesanan Anda di Bumi Baik.",
+  robots: { index: false, follow: false },
 };
 
 export default async function OrdersPage() {

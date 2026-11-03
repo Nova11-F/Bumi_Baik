@@ -81,15 +81,15 @@ export default async function DampakPage({
           <p>
             Nilai CO₂e dan plastik adalah estimasi, bukan hasil pengukuran
             langsung dari setiap penggunaan. Gagasan dasarnya adalah
-            membandingkan produk dengan barang atau sumber energi yang
-            mungkin digantikannya. Pembanding hanya bisa dijelaskan bila
-            catatan produk menyebutkannya.
+            membandingkan produk dengan barang atau sumber energi yang mungkin
+            digantikannya. Pembanding hanya bisa dijelaskan bila catatan produk
+            menyebutkannya.
           </p>
           <p>
             Lama pemakaian dan pola penggunaan juga memengaruhi hasil. Tabel
             berikut menampilkan catatan asumsi dari data produk; jika catatan
-            tidak menjelaskan baseline atau umur pakai, informasi tersebut
-            belum tersedia dan tidak kami isi dengan asumsi baru.
+            tidak menjelaskan baseline atau umur pakai, informasi tersebut belum
+            tersedia dan tidak kami isi dengan asumsi baru.
           </p>
           <div className="space-y-2 border-l-2 border-forest-500 pl-4 text-sm">
             <p>[PERLU DIISI: sumber faktor emisi]</p>
@@ -126,7 +126,7 @@ export default async function DampakPage({
               <select
                 name="urut"
                 defaultValue={sort}
-                className="h-11 min-w-48 rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 focus:border-forest-700 focus:outline-none"
+                className="h-11 min-w-48 rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
               >
                 <option value="co2e">Estimasi CO₂e terbesar</option>
                 <option value="plastik">Estimasi plastik terbesar</option>
@@ -170,7 +170,10 @@ export default async function DampakPage({
                       key={product.slug}
                       className="border-b border-paper-200 align-top"
                     >
-                      <th scope="row" className="min-w-48 px-4 py-4 font-medium">
+                      <th
+                        scope="row"
+                        className="min-w-48 px-4 py-4 font-medium"
+                      >
                         <Link
                           href={`/produk/${product.slug}`}
                           className="inline-flex min-h-11 items-center text-forest-700 underline-offset-4 hover:underline"
@@ -289,8 +292,8 @@ export default async function DampakPage({
           <li className="flex gap-4 border-t border-paper-200 py-4">
             <SdgTag goal={12} />
             <p className="text-base leading-relaxed text-ink-600">
-              SDG 12 — Konsumsi dan Produksi yang Bertanggung Jawab: produk
-              guna ulang, isi ulang, dan pengganti plastik sekali pakai.
+              SDG 12 — Konsumsi dan Produksi yang Bertanggung Jawab: produk guna
+              ulang, isi ulang, dan pengganti plastik sekali pakai.
             </p>
           </li>
           <li className="flex gap-4 border-t border-paper-200 py-4">
@@ -325,16 +328,15 @@ export default async function DampakPage({
         </div>
         <div className="max-w-prose space-y-4 text-base leading-relaxed text-ink-600 lg:col-span-7 lg:col-start-6">
           <p>
-            Semua nilai dampak saat ini adalah estimasi ilustratif untuk MVP
-            dan belum diverifikasi oleh pihak ketiga. Hasil sebenarnya dapat
-            berbeda menurut produk pembanding, lama pemakaian, dan kebiasaan
-            pengguna.
+            Semua nilai dampak saat ini adalah estimasi ilustratif untuk MVP dan
+            belum diverifikasi oleh pihak ketiga. Hasil sebenarnya dapat berbeda
+            menurut produk pembanding, lama pemakaian, dan kebiasaan pengguna.
           </p>
           <p>
             Kami akan memperbarui angka setelah sumber faktor emisi, baseline,
             asumsi umur pakai, dan cara hitung tiap produk dapat dicantumkan.
-            Perubahan metode dan tanggal pembaruan akan dijelaskan bersama
-            data yang diperbarui.
+            Perubahan metode dan tanggal pembaruan akan dijelaskan bersama data
+            yang diperbarui.
           </p>
         </div>
       </section>

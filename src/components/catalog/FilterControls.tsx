@@ -157,7 +157,7 @@ export function FilterControls({
                   value={minPrice}
                   onChange={(event) => setMinPrice(event.target.value)}
                   placeholder="0"
-                  className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-400 focus:border-forest-700 focus:outline-none"
+                  className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
                 />
               </div>
               <div>
@@ -176,7 +176,7 @@ export function FilterControls({
                   value={maxPrice}
                   onChange={(event) => setMaxPrice(event.target.value)}
                   placeholder="Tanpa batas"
-                  className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-400 focus:border-forest-700 focus:outline-none"
+                  className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
                 />
               </div>
             </div>

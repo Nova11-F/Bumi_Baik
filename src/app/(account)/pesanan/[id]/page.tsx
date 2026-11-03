@@ -18,6 +18,7 @@ import type { Json, Order, OrderItem, Payment } from "@/types";
 export const metadata: Metadata = {
   title: "Detail Pesanan",
   description: "Status, rincian, dan pembayaran pesanan Bumi Baik.",
+  robots: { index: false, follow: false },
 };
 
 const addressSnapshotSchema = z.object({
@@ -158,9 +159,7 @@ export default async function OrderDetailPage({
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-ink-600">Total tagihan</dt>
-              <dd className="font-medium text-ink-900">
-                {rupiah(payableIdr)}
-              </dd>
+              <dd className="font-medium text-ink-900">{rupiah(payableIdr)}</dd>
             </div>
             {serviceFeeIdr > 0 && (
               <div className="flex justify-between gap-4">
@@ -197,9 +196,7 @@ export default async function OrderDetailPage({
               {paymentInfo.store && paymentInfo.paymentCode && (
                 <p className="text-ink-900">
                   {paymentInfo.store} ·{" "}
-                  <span className="font-mono">
-                    {paymentInfo.paymentCode}
-                  </span>
+                  <span className="font-mono">{paymentInfo.paymentCode}</span>
                 </p>
               )}
               {paymentInfo.qrString && (

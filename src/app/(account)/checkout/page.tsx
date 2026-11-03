@@ -14,6 +14,7 @@ import type { Address, Product } from "@/types";
 export const metadata: Metadata = {
   title: "Checkout",
   description: "Periksa alamat, pengiriman, dan ringkasan pesanan Anda.",
+  robots: { index: false, follow: false },
 };
 
 export default async function CheckoutPage() {
@@ -53,9 +54,7 @@ export default async function CheckoutPage() {
   if (productsResult.error || addressesResult.error || profileResult.error) {
     throw new Error("Data checkout belum berhasil dimuat.", {
       cause:
-        productsResult.error ??
-        addressesResult.error ??
-        profileResult.error,
+        productsResult.error ?? addressesResult.error ?? profileResult.error,
     });
   }
 

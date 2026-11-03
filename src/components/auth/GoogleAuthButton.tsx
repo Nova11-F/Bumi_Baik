@@ -9,7 +9,10 @@ type GoogleAuthButtonProps = {
   redirectTo: string;
 };
 
-export function GoogleAuthButton({ enabled, redirectTo }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({
+  enabled,
+  redirectTo,
+}: GoogleAuthButtonProps) {
   const noteId = useId();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export function GoogleAuthButton({ enabled, redirectTo }: GoogleAuthButtonProps)
         onClick={handleClick}
         disabled={!enabled || loading}
         aria-describedby={!enabled ? noteId : undefined}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-paper-200 bg-paper-50 px-6 font-medium text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:bg-paper-100 disabled:text-ink-400"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-paper-200 bg-paper-50 px-6 font-medium text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:bg-paper-100 disabled:text-ink-600"
       >
         <LogIn className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
         {loading ? "Mengalihkan…" : "Lanjutkan dengan Google"}

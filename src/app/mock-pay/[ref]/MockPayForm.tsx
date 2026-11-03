@@ -23,7 +23,7 @@ export function MockPayForm({ ref }: { ref: string }) {
         name="status"
         value="paid"
         disabled={pending}
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
       >
         {pending ? "Memproses..." : "Berhasil"}
       </button>

@@ -7,7 +7,9 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 
 export const metadata: Metadata = {
   title: "Masuk",
-  description: "Masuk ke akun Bumi Baik untuk melanjutkan belanja dan mengelola alamat.",
+  description:
+    "Masuk ke akun Bumi Baik untuk melanjutkan belanja dan mengelola alamat.",
+  robots: { index: false, follow: false },
 };
 
 type MasukPageProps = {
@@ -44,8 +46,14 @@ export default async function MasukPage({ searchParams }: MasukPageProps) {
           role="alert"
           className="mt-6 flex items-start gap-2 rounded-md border border-danger bg-paper-50 px-3 py-2.5 text-sm text-danger"
         >
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-          <p>Tautan masuk tidak valid atau sudah kedaluwarsa. Silakan coba lagi.</p>
+          <CircleAlert
+            className="mt-0.5 h-4 w-4 shrink-0"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+          <p>
+            Tautan masuk tidak valid atau sudah kedaluwarsa. Silakan coba lagi.
+          </p>
         </div>
       )}
 

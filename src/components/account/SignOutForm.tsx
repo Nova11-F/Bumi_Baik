@@ -19,7 +19,7 @@ export function SignOutForm({ onClick }: { onClick?: () => void }) {
           type="submit"
           disabled={pending}
           onClick={onClick}
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-forest-700 px-4 text-sm font-medium text-forest-700 hover:bg-forest-100 disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-ink-400"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-forest-700 px-4 text-sm font-medium text-forest-700 hover:bg-forest-100 disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-ink-600"
         >
           <LogOut className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
           {pending ? "Keluar…" : "Keluar"}

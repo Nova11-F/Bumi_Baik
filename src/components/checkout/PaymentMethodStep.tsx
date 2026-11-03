@@ -88,7 +88,7 @@ export function PaymentMethodStep({
                   key={channel.code}
                   className={`flex cursor-pointer items-start gap-3 rounded-md border p-4 ${
                     disabled
-                      ? "cursor-not-allowed border-paper-200 bg-paper-100 text-ink-400"
+                      ? "cursor-not-allowed border-paper-200 bg-paper-100 text-ink-600"
                       : selectedCode === channel.code
                         ? "border-forest-700 bg-forest-100"
                         : "border-paper-200"

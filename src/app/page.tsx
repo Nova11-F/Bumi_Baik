@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { ProductImage } from "@/components/product/ProductImage";
@@ -7,6 +8,17 @@ import { CATEGORIES, SDG_GOALS } from "@/lib/constants";
 import { angka, co2e as formatCo2e } from "@/lib/format";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: "Produk Ramah Iklim",
+  description:
+    "Jelajahi produk sehari-hari dengan estimasi dampak yang transparan dan informasi produk yang jelas.",
+  alternates: { canonical: "/" },
+};
+
+function serializeJsonLd(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
 
 export default async function Home() {
   const products = await getHomeProducts();
@@ -44,9 +56,33 @@ export default async function Home() {
     count: products.filter((product) => product.sdg_goals.includes(goal.number))
       .length,
   }));
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, "");
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Bumi Baik",
+      url: siteUrl,
+      description:
+        "Katalog produk sehari-hari dengan estimasi dampak lingkungan yang transparan.",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Bumi Baik",
+      url: siteUrl,
+      inLanguage: "id-ID",
+    },
+  ];
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
       <section className="border-b border-paper-200">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 lg:py-24">
           <div className="lg:col-span-6">

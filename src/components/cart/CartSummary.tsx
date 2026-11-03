@@ -11,13 +11,8 @@ export function CartSummary({
   compact?: boolean;
   onContinue?: () => void;
 }) {
-  const {
-    items,
-    subtotal,
-    totalCo2eKg,
-    totalPlasticAvoidedG,
-    itemCount,
-  } = useCart();
+  const { items, subtotal, totalCo2eKg, totalPlasticAvoidedG, itemCount } =
+    useCart();
   const pricesAvailable = items.every((item) => item.product !== null);
   const canCheckout =
     pricesAvailable &&
@@ -31,7 +26,9 @@ export function CartSummary({
 
   return (
     <aside className="rounded-md border border-paper-200 bg-paper-50 p-5">
-      <h2 className="font-display text-xl text-forest-900">Ringkasan belanja</h2>
+      <h2 className="font-display text-xl text-forest-900">
+        Ringkasan belanja
+      </h2>
       <div className="mt-4 flex justify-between gap-4 text-sm text-ink-600">
         <span>Subtotal ({itemCount} item)</span>
         <span className="font-medium text-ink-900">
@@ -40,7 +37,9 @@ export function CartSummary({
       </div>
 
       <section
-        aria-labelledby={compact ? "drawer-impact-heading" : "cart-impact-heading"}
+        aria-labelledby={
+          compact ? "drawer-impact-heading" : "cart-impact-heading"
+        }
         className="mt-5 border-t border-paper-200 pt-4"
       >
         <h3
@@ -88,7 +87,7 @@ export function CartSummary({
         className={`mt-5 inline-flex h-11 w-full items-center justify-center rounded-md px-6 font-medium ${
           canCheckout
             ? "bg-forest-700 text-paper-50 hover:bg-forest-900"
-            : "pointer-events-none cursor-not-allowed bg-paper-200 text-ink-400"
+            : "pointer-events-none cursor-not-allowed bg-paper-200 text-ink-600"
         }`}
       >
         Lanjut ke checkout

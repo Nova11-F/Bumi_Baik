@@ -41,7 +41,10 @@ export default async function ProdukPage({ searchParams }: ProdukPageProps) {
         aria-label="Breadcrumb"
         className="flex items-center gap-1 text-sm text-ink-600"
       >
-        <Link href="/" className="inline-flex min-h-11 items-center hover:text-forest-700">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center hover:text-forest-700"
+        >
           Beranda
         </Link>
         <ChevronRight
@@ -164,7 +167,7 @@ export default async function ProdukPage({ searchParams }: ProdukPageProps) {
                   Sebelumnya
                 </Link>
               ) : (
-                <span className="inline-flex h-11 cursor-not-allowed items-center rounded-md bg-paper-200 px-4 font-medium text-ink-400">
+                <span className="inline-flex h-11 cursor-not-allowed items-center rounded-md bg-paper-200 px-4 font-medium text-ink-600">
                   Sebelumnya
                 </span>
               )}
@@ -181,7 +184,7 @@ export default async function ProdukPage({ searchParams }: ProdukPageProps) {
                   Berikutnya
                 </Link>
               ) : (
-                <span className="inline-flex h-11 cursor-not-allowed items-center rounded-md bg-paper-200 px-4 font-medium text-ink-400">
+                <span className="inline-flex h-11 cursor-not-allowed items-center rounded-md bg-paper-200 px-4 font-medium text-ink-600">
                   Berikutnya
                 </span>
               )}

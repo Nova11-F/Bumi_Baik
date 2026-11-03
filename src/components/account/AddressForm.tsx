@@ -8,13 +8,13 @@ import {
   labelClass,
   primaryButtonClass,
 } from "@/components/ui/form-styles";
-import {
-  type FormState,
-  initialFormState,
-} from "@/lib/validators/common";
+import { type FormState, initialFormState } from "@/lib/validators/common";
 import type { Address } from "@/types";
 
-type AddressAction = (state: FormState, formData: FormData) => Promise<FormState>;
+type AddressAction = (
+  state: FormState,
+  formData: FormData,
+) => Promise<FormState>;
 
 type AddressFormProps = {
   action: AddressAction;
@@ -46,7 +46,10 @@ export function AddressForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${address?.id ?? "new"}-recipient`} className={labelClass}>
+          <label
+            htmlFor={`${address?.id ?? "new"}-recipient`}
+            className={labelClass}
+          >
             Nama penerima
           </label>
           <input
@@ -57,7 +60,9 @@ export function AddressForm({
             defaultValue={address?.recipient ?? ""}
             aria-invalid={Boolean(state.errors?.recipient)}
             aria-describedby={
-              state.errors?.recipient ? `${address?.id ?? "new"}-recipient-error` : undefined
+              state.errors?.recipient
+                ? `${address?.id ?? "new"}-recipient-error`
+                : undefined
             }
             className={`${inputClass} ${state.errors?.recipient ? inputErrorClass : ""}`}
           />
@@ -68,7 +73,10 @@ export function AddressForm({
         </div>
 
         <div>
-          <label htmlFor={`${address?.id ?? "new"}-phone`} className={labelClass}>
+          <label
+            htmlFor={`${address?.id ?? "new"}-phone`}
+            className={labelClass}
+          >
             Nomor telepon
           </label>
           <input
@@ -80,7 +88,9 @@ export function AddressForm({
             defaultValue={address?.phone ?? ""}
             aria-invalid={Boolean(state.errors?.phone)}
             aria-describedby={
-              state.errors?.phone ? `${address?.id ?? "new"}-phone-error` : undefined
+              state.errors?.phone
+                ? `${address?.id ?? "new"}-phone-error`
+                : undefined
             }
             className={`${inputClass} ${state.errors?.phone ? inputErrorClass : ""}`}
           />
@@ -92,7 +102,10 @@ export function AddressForm({
       </div>
 
       <div>
-        <label htmlFor={`${address?.id ?? "new"}-street`} className={labelClass}>
+        <label
+          htmlFor={`${address?.id ?? "new"}-street`}
+          className={labelClass}
+        >
           Alamat lengkap
         </label>
         <textarea
@@ -103,9 +116,11 @@ export function AddressForm({
           defaultValue={address?.street ?? ""}
           aria-invalid={Boolean(state.errors?.street)}
           aria-describedby={
-            state.errors?.street ? `${address?.id ?? "new"}-street-error` : undefined
+            state.errors?.street
+              ? `${address?.id ?? "new"}-street-error`
+              : undefined
           }
-          className={`w-full rounded-md border border-paper-200 bg-white px-3 py-2 text-base text-ink-900 placeholder:text-ink-400 focus:border-forest-700 focus:outline-none ${
+          className={`w-full rounded-md border border-paper-200 bg-white px-3 py-2 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 ${
             state.errors?.street ? inputErrorClass : ""
           }`}
         />
@@ -117,7 +132,10 @@ export function AddressForm({
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label htmlFor={`${address?.id ?? "new"}-city`} className={labelClass}>
+          <label
+            htmlFor={`${address?.id ?? "new"}-city`}
+            className={labelClass}
+          >
             Kota/kabupaten
           </label>
           <input
@@ -128,7 +146,9 @@ export function AddressForm({
             defaultValue={address?.city ?? ""}
             aria-invalid={Boolean(state.errors?.city)}
             aria-describedby={
-              state.errors?.city ? `${address?.id ?? "new"}-city-error` : undefined
+              state.errors?.city
+                ? `${address?.id ?? "new"}-city-error`
+                : undefined
             }
             className={`${inputClass} ${state.errors?.city ? inputErrorClass : ""}`}
           />
@@ -139,7 +159,10 @@ export function AddressForm({
         </div>
 
         <div>
-          <label htmlFor={`${address?.id ?? "new"}-province`} className={labelClass}>
+          <label
+            htmlFor={`${address?.id ?? "new"}-province`}
+            className={labelClass}
+          >
             Provinsi
           </label>
           <input
@@ -150,7 +173,9 @@ export function AddressForm({
             defaultValue={address?.province ?? ""}
             aria-invalid={Boolean(state.errors?.province)}
             aria-describedby={
-              state.errors?.province ? `${address?.id ?? "new"}-province-error` : undefined
+              state.errors?.province
+                ? `${address?.id ?? "new"}-province-error`
+                : undefined
             }
             className={`${inputClass} ${state.errors?.province ? inputErrorClass : ""}`}
           />
@@ -161,7 +186,10 @@ export function AddressForm({
         </div>
 
         <div>
-          <label htmlFor={`${address?.id ?? "new"}-postal`} className={labelClass}>
+          <label
+            htmlFor={`${address?.id ?? "new"}-postal`}
+            className={labelClass}
+          >
             Kode pos
           </label>
           <input
@@ -174,7 +202,9 @@ export function AddressForm({
             defaultValue={address?.postal_code ?? ""}
             aria-invalid={Boolean(state.errors?.postal_code)}
             aria-describedby={
-              state.errors?.postal_code ? `${address?.id ?? "new"}-postal-error` : undefined
+              state.errors?.postal_code
+                ? `${address?.id ?? "new"}-postal-error`
+                : undefined
             }
             className={`${inputClass} ${state.errors?.postal_code ? inputErrorClass : ""}`}
           />

@@ -70,8 +70,9 @@ export function CheckoutFlow({
 }: CheckoutFlowProps) {
   const defaultAddress = addresses.find((address) => address.is_default);
   const initialChannel =
-    channels.find((channel) => isAmountAllowed(channel, quotes.jawa.totalIdr)) ??
-    channels[0];
+    channels.find((channel) =>
+      isAmountAllowed(channel, quotes.jawa.totalIdr),
+    ) ?? channels[0];
   const [step, setStep] = useState(1);
   const [addressMode, setAddressMode] = useState<"saved" | "new">(
     defaultAddress ? "saved" : "new",
@@ -160,9 +161,7 @@ export function CheckoutFlow({
       ...(addressMode === "saved" ? { addressId } : { newAddress }),
       shippingMethod,
       channelCode,
-      ...(customerPhone.trim()
-        ? { customerPhone: customerPhone.trim() }
-        : {}),
+      ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
       idempotencyKey,
     };
 
@@ -406,7 +405,7 @@ export function CheckoutFlow({
                 type="button"
                 onClick={continueFromAddress}
                 disabled={hasUnavailableItems}
-                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400"
+                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
               >
                 Lanjut ke pengiriman
               </button>
@@ -539,7 +538,7 @@ export function CheckoutFlow({
                   type="button"
                   onClick={submitCheckout}
                   disabled={!canSubmit || submitting}
-                  className="hidden min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400 lg:inline-flex"
+                  className="hidden min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600 lg:inline-flex"
                 >
                   {submitting ? "Memproses pesanan..." : "Bayar sekarang"}
                 </button>
@@ -604,7 +603,7 @@ export function CheckoutFlow({
               type="button"
               onClick={submitCheckout}
               disabled={!canSubmit || submitting}
-              className="inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-400"
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
             >
               {submitting ? "Memproses..." : "Bayar sekarang"}
             </button>

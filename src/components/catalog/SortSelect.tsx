@@ -34,7 +34,7 @@ export function SortSelect({ params }: SortSelectProps) {
         value={params.urut}
         onChange={handleChange}
         aria-busy={isPending}
-        className="h-11 rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 focus:border-forest-700 focus:outline-none"
+        className="h-11 rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>

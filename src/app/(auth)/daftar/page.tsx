@@ -6,7 +6,9 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 
 export const metadata: Metadata = {
   title: "Daftar",
-  description: "Buat akun Bumi Baik untuk menyimpan alamat dan riwayat pesanan.",
+  description:
+    "Buat akun Bumi Baik untuk menyimpan alamat dan riwayat pesanan.",
+  robots: { index: false, follow: false },
 };
 
 type DaftarPageProps = {
@@ -31,7 +33,8 @@ export default async function DaftarPage({ searchParams }: DaftarPageProps) {
         Buat akun
       </h1>
       <p className="mt-3 text-base leading-relaxed text-ink-600">
-        Daftar agar alamat, pesanan, dan ringkasan dampak belanja tersimpan di satu tempat.
+        Daftar agar alamat, pesanan, dan ringkasan dampak belanja tersimpan di
+        satu tempat.
       </p>
 
       <div className="mt-8 rounded-md border border-paper-200 bg-paper-50 p-6">

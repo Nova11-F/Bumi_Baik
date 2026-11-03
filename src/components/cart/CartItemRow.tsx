@@ -75,26 +75,33 @@ export function CartItemRow({
           >
             <button
               type="button"
-              onClick={() => void changeQuantity(item.productId, item.quantity - 1)}
+              onClick={() =>
+                void changeQuantity(item.productId, item.quantity - 1)
+              }
               disabled={item.quantity <= 1 || !product}
               aria-label="Kurangi jumlah"
-              className="flex h-11 w-11 items-center justify-center rounded-l-md text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:text-ink-400"
+              className="flex h-11 w-11 items-center justify-center rounded-l-md text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:text-ink-600"
             >
               <Minus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <span className="min-w-10 text-center font-mono text-sm" aria-live="polite">
+            <span
+              className="min-w-10 text-center font-mono text-sm"
+              aria-live="polite"
+            >
               {item.quantity}
             </span>
             <button
               type="button"
-              onClick={() => void changeQuantity(item.productId, item.quantity + 1)}
+              onClick={() =>
+                void changeQuantity(item.productId, item.quantity + 1)
+              }
               disabled={
                 unavailable ||
                 !product ||
                 item.quantity >= Math.min(product.stock, 99)
               }
               aria-label="Tambah jumlah"
-              className="flex h-11 w-11 items-center justify-center rounded-r-md text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:text-ink-400"
+              className="flex h-11 w-11 items-center justify-center rounded-r-md text-ink-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:text-ink-600"
             >
               <Plus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
             </button>
