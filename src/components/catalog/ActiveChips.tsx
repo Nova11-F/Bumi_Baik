@@ -1,10 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import type { CatalogParams } from "@/lib/catalog-query";
 import { rupiah } from "@/lib/format";
+import { useCatalogNavigation } from "./CatalogNavigation";
 import {
   buildCatalogHref,
   categoryName,
@@ -23,8 +22,7 @@ type Chip = {
 };
 
 export function ActiveChips({ params }: ActiveChipsProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { navigate: goTo, isPending } = useCatalogNavigation();
   const activeCount = countActiveFilters(params);
   const chips: Chip[] = [];
 
@@ -86,9 +84,7 @@ export function ActiveChips({ params }: ActiveChipsProps) {
   if (chips.length === 0) return null;
 
   function navigate(next: CatalogParams) {
-    startTransition(() => {
-      router.replace(buildCatalogHref(next), { scroll: false });
-    });
+    goTo(buildCatalogHref(next));
   }
 
   return (

@@ -2,7 +2,10 @@
 
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
-import { useCart, type CartDisplayItem } from "@/components/cart/CartProvider";
+import {
+  useCartActions,
+  type CartDisplayItem,
+} from "@/components/cart/CartProvider";
 import { rupiah } from "@/lib/format";
 
 export function CartItemRow({
@@ -12,7 +15,7 @@ export function CartItemRow({
   item: CartDisplayItem;
   compact?: boolean;
 }) {
-  const { changeQuantity, deleteItem } = useCart();
+  const { changeQuantity, deleteItem } = useCartActions();
   const product = item.product;
   const unavailable = !product || product.stock === 0;
   const stockWarning =

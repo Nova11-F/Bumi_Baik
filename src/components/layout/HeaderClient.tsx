@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { SignOutForm } from "@/components/account/SignOutForm";
 import { SearchBox } from "@/components/search/SearchBox";
-import { useCart } from "@/components/cart/CartProvider";
+import { useCartHeader } from "@/components/cart/CartProvider";
 import { MobileNav } from "./MobileNav";
 import { MobileSearch } from "./MobileSearch";
 
@@ -27,7 +27,7 @@ export function HeaderClient({ account }: { account: HeaderAccount | null }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [badgePulse, setBadgePulse] = useState(false);
-  const { itemCount, isCountReady, setDrawerOpen } = useCart();
+  const { itemCount, isCountReady, setDrawerOpen } = useCartHeader();
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const accountButtonRef = useRef<HTMLButtonElement>(null);
   const cartCountRef = useRef<number | null>(null);

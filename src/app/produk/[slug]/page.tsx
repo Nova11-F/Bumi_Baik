@@ -47,7 +47,9 @@ function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
-export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
+export default async function ProductDetailPage({
+  params,
+}: ProductDetailPageProps) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
 
@@ -55,7 +57,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  const relatedProducts = await getRelatedProducts(product.category_id, product.id);
+  const relatedProducts = await getRelatedProducts(
+    product.category_id,
+    product.id,
+  );
   const stockStatus = getStockStatus(product.stock);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -73,7 +78,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       priceCurrency: "IDR",
       price: product.price_idr,
       availability:
-        product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        product.stock > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
       url: `${siteUrl}/produk/${product.slug}`,
     },
   };
@@ -89,14 +96,28 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1 text-sm text-ink-600"
       >
-        <Link href="/" className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700"
+        >
           Beranda
         </Link>
-        <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-        <Link href="/produk" className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700">
+        <ChevronRight
+          className="h-4 w-4 shrink-0"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
+        <Link
+          href="/produk"
+          className="inline-flex min-h-11 shrink-0 items-center hover:text-forest-700"
+        >
           Produk
         </Link>
-        <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+        <ChevronRight
+          className="h-4 w-4 shrink-0"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
         <span aria-current="page" className="truncate text-ink-900">
           {product.name}
         </span>
@@ -125,7 +146,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </div>
           )}
 
-          <p className="mt-5 text-2xl font-semibold text-ink-900">{rupiah(product.price_idr)}</p>
+          <p className="mt-5 text-2xl font-semibold text-ink-900">
+            {rupiah(product.price_idr)}
+          </p>
 
           <p
             className={`mt-2 text-sm font-medium ${
@@ -148,9 +171,16 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </div>
 
           <AddToCartButton
-            productId={product.id}
-            productName={product.name}
-            stock={product.stock}
+            product={{
+              id: product.id,
+              slug: product.slug,
+              name: product.name,
+              price_idr: product.price_idr,
+              stock: product.stock,
+              co2e_avoided_kg: product.co2e_avoided_kg,
+              plastic_avoided_g: product.plastic_avoided_g,
+              images: product.images,
+            }}
           />
 
           <div className="mt-8 divide-y divide-paper-200 border-y border-paper-200">
@@ -182,12 +212,16 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   {product.specs.map((spec) => (
                     <div key={`${spec.label}-${spec.value}`}>
                       <dt className="text-ink-600">{spec.label}</dt>
-                      <dd className="mt-0.5 font-medium text-ink-900">{spec.value}</dd>
+                      <dd className="mt-0.5 font-medium text-ink-900">
+                        {spec.value}
+                      </dd>
                     </div>
                   ))}
                 </dl>
               ) : (
-                <p className="mt-3 text-sm text-ink-600">Belum ada spesifikasi untuk produk ini.</p>
+                <p className="mt-3 text-sm text-ink-600">
+                  Belum ada spesifikasi untuk produk ini.
+                </p>
               )}
             </details>
 
@@ -202,11 +236,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </summary>
               <div className="mt-3 space-y-2 text-sm leading-relaxed text-ink-600">
                 <p>
-                  Ongkir flat {rupiah(SHIPPING_ZONES.jawa.rateIdr)} untuk Jawa dan{" "}
-                  {rupiah(SHIPPING_ZONES.luarJawa.rateIdr)} untuk luar Jawa.
+                  Ongkir flat {rupiah(SHIPPING_ZONES.jawa.rateIdr)} untuk Jawa
+                  dan {rupiah(SHIPPING_ZONES.luarJawa.rateIdr)} untuk luar Jawa.
                 </p>
                 <p>
-                  Gratis ongkir untuk pesanan mulai {rupiah(FREE_SHIPPING_MIN_IDR)}. Berat produk{" "}
+                  Gratis ongkir untuk pesanan mulai{" "}
+                  {rupiah(FREE_SHIPPING_MIN_IDR)}. Berat produk{" "}
                   {angka(product.weight_g)} g.
                 </p>
               </div>

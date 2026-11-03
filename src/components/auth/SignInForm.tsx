@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LoaderCircle } from "lucide-react";
 import { useActionState } from "react";
 import { signInAction } from "@/app/(auth)/actions";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
@@ -19,7 +20,10 @@ type SignInFormProps = {
 };
 
 export function SignInForm({ redirectTo, googleEnabled }: SignInFormProps) {
-  const [state, formAction, pending] = useActionState(signInAction, initialFormState);
+  const [state, formAction, pending] = useActionState(
+    signInAction,
+    initialFormState,
+  );
   const emailError = state.errors?.email;
   const passwordError = state.errors?.password;
 
@@ -72,7 +76,17 @@ export function SignInForm({ redirectTo, googleEnabled }: SignInFormProps) {
         </div>
 
         <button type="submit" disabled={pending} className={primaryButtonClass}>
-          {pending ? "Memproses…" : "Masuk"}
+          {pending ? (
+            <>
+              <LoaderCircle
+                className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Memproses…
+            </>
+          ) : (
+            "Masuk"
+          )}
         </button>
       </form>
 

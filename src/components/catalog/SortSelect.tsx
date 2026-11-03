@@ -1,27 +1,21 @@
 "use client";
 
-import { useId, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useId } from "react";
 import type { CatalogParams, CatalogSort } from "@/lib/catalog-query";
 import { buildCatalogHref, SORT_OPTIONS } from "./filter-utils";
+import { useCatalogNavigation } from "./CatalogNavigation";
 
 type SortSelectProps = {
   params: CatalogParams;
 };
 
 export function SortSelect({ params }: SortSelectProps) {
-  const router = useRouter();
+  const { isPending, navigate } = useCatalogNavigation();
   const selectId = useId();
-  const [isPending, startTransition] = useTransition();
 
   function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const urut = event.target.value as CatalogSort;
-
-    startTransition(() => {
-      router.replace(buildCatalogHref({ ...params, urut, hal: 1 }), {
-        scroll: false,
-      });
-    });
+    navigate(buildCatalogHref({ ...params, urut, hal: 1 }));
   }
 
   return (

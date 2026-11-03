@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LoaderCircle } from "lucide-react";
 import { useActionState } from "react";
 import { signUpAction } from "@/app/(auth)/actions";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
@@ -19,7 +20,10 @@ type SignUpFormProps = {
 };
 
 export function SignUpForm({ redirectTo, googleEnabled }: SignUpFormProps) {
-  const [state, formAction, pending] = useActionState(signUpAction, initialFormState);
+  const [state, formAction, pending] = useActionState(
+    signUpAction,
+    initialFormState,
+  );
   const fullNameError = state.errors?.fullName;
   const emailError = state.errors?.email;
   const passwordError = state.errors?.password;
@@ -96,14 +100,26 @@ export function SignUpForm({ redirectTo, googleEnabled }: SignUpFormProps) {
             type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(confirmError)}
-            aria-describedby={confirmError ? "confirm-password-error" : undefined}
+            aria-describedby={
+              confirmError ? "confirm-password-error" : undefined
+            }
             className={`${inputClass} ${confirmError ? inputErrorClass : ""}`}
           />
           <FieldError id="confirm-password-error" messages={confirmError} />
         </div>
 
         <button type="submit" disabled={pending} className={primaryButtonClass}>
-          {pending ? "Memproses…" : "Buat akun"}
+          {pending ? (
+            <>
+              <LoaderCircle
+                className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Memproses…
+            </>
+          ) : (
+            "Buat akun"
+          )}
         </button>
       </form>
 

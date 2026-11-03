@@ -5,11 +5,12 @@ import { X } from "lucide-react";
 import { useRef } from "react";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { CartSummary } from "@/components/cart/CartSummary";
-import { useCart } from "@/components/cart/CartProvider";
+import { useCartDrawer, useCartItems } from "@/components/cart/CartProvider";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 
 export function CartDrawer() {
-  const { items, isReady, isDrawerOpen, notice, setDrawerOpen } = useCart();
+  const { items, isReady } = useCartItems();
+  const { isDrawerOpen, notice, setDrawerOpen } = useCartDrawer();
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(isDrawerOpen, panelRef, () => setDrawerOpen(false));
 
@@ -64,8 +65,8 @@ export function CartDrawer() {
               Keranjang masih kosong.
             </p>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-ink-600">
-              Tambahkan produk dari katalog untuk melihat ringkasan belanja
-              Anda di sini.
+              Tambahkan produk dari katalog untuk melihat ringkasan belanja Anda
+              di sini.
             </p>
             <Link
               href="/produk"
@@ -79,18 +80,11 @@ export function CartDrawer() {
           <>
             <ul className="min-h-0 flex-1 overflow-y-auto px-5">
               {items.map((item) => (
-                <CartItemRow
-                  key={item.productId}
-                  item={item}
-                  compact
-                />
+                <CartItemRow key={item.productId} item={item} compact />
               ))}
             </ul>
             <div className="max-h-[48%] overflow-y-auto border-t border-paper-200 p-5">
-              <CartSummary
-                compact
-                onContinue={() => setDrawerOpen(false)}
-              />
+              <CartSummary compact onContinue={() => setDrawerOpen(false)} />
             </div>
           </>
         )}

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import type { CatalogParams } from "@/lib/catalog-query";
 import { CATEGORIES, SDG_GOALS } from "@/lib/constants";
+import { useCatalogNavigation } from "./CatalogNavigation";
 import {
   buildCatalogHref,
   countActiveFilters,
@@ -25,29 +25,36 @@ export function FilterControls({
   variant,
   onApplied,
 }: FilterControlsProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { navigate } = useCatalogNavigation();
   const [minPrice, setMinPrice] = useState(params.hargaMin?.toString() ?? "");
   const [maxPrice, setMaxPrice] = useState(params.hargaMax?.toString() ?? "");
   const priceId = useId();
+  const priceTimer = useRef<number | null>(null);
   const activeCount = countActiveFilters(params);
 
   useEffect(() => {
+    if (priceTimer.current !== null) {
+      window.clearTimeout(priceTimer.current);
+      priceTimer.current = null;
+    }
     setMinPrice(params.hargaMin?.toString() ?? "");
     setMaxPrice(params.hargaMax?.toString() ?? "");
   }, [params.hargaMin, params.hargaMax]);
 
+  useEffect(
+    () => () => {
+      if (priceTimer.current !== null) window.clearTimeout(priceTimer.current);
+    },
+    [],
+  );
+
   function apply(next: CatalogParams) {
-    startTransition(() => {
-      router.replace(buildCatalogHref({ ...next, hal: 1 }), { scroll: false });
-    });
+    navigate(buildCatalogHref({ ...next, hal: 1 }));
   }
 
-  function applyPrice(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsedMin = minPrice.trim() === "" ? null : Number(minPrice);
-    const parsedMax = maxPrice.trim() === "" ? null : Number(maxPrice);
-
+  function applyPriceValues(minimum: string, maximum: string) {
+    const parsedMin = minimum.trim() === "" ? null : Number(minimum);
+    const parsedMax = maximum.trim() === "" ? null : Number(maximum);
     apply({
       ...params,
       hargaMin:
@@ -61,12 +68,25 @@ export function FilterControls({
     });
   }
 
+  function schedulePriceUpdate(minimum: string, maximum: string) {
+    if (priceTimer.current !== null) window.clearTimeout(priceTimer.current);
+    priceTimer.current = window.setTimeout(() => {
+      priceTimer.current = null;
+      applyPriceValues(minimum, maximum);
+    }, 350);
+  }
+
+  function applyPrice(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (priceTimer.current !== null) {
+      window.clearTimeout(priceTimer.current);
+      priceTimer.current = null;
+    }
+    applyPriceValues(minPrice, maxPrice);
+  }
+
   return (
-    <div
-      className={
-        isPending ? "opacity-60 transition-opacity" : "transition-opacity"
-      }
-    >
+    <div>
       {variant === "sidebar" && (
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-xl text-forest-900">Filter</h2>
@@ -155,7 +175,11 @@ export function FilterControls({
                   min={0}
                   step={1000}
                   value={minPrice}
-                  onChange={(event) => setMinPrice(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setMinPrice(value);
+                    schedulePriceUpdate(value, maxPrice);
+                  }}
                   placeholder="0"
                   className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
                 />
@@ -174,7 +198,11 @@ export function FilterControls({
                   min={0}
                   step={1000}
                   value={maxPrice}
-                  onChange={(event) => setMaxPrice(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setMaxPrice(value);
+                    schedulePriceUpdate(minPrice, value);
+                  }}
                   placeholder="Tanpa batas"
                   className="h-11 w-full rounded-md border border-paper-200 bg-white px-3 text-base text-ink-900 placeholder:text-ink-600 focus:border-forest-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"
                 />

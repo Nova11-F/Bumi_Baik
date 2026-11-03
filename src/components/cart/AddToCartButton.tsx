@@ -3,18 +3,15 @@
 import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useCart } from "@/components/cart/CartProvider";
+import {
+  useCartActions,
+  useCartHeader,
+  type CartProductSnapshot,
+} from "@/components/cart/CartProvider";
 
-export function AddToCartButton({
-  productId,
-  productName,
-  stock,
-}: {
-  productId: string;
-  productName: string;
-  stock: number;
-}) {
-  const { addProduct, isReady } = useCart();
+export function AddToCartButton({ product }: { product: CartProductSnapshot }) {
+  const { addProduct } = useCartActions();
+  const { isCountReady } = useCartHeader();
   const [pending, setPending] = useState(false);
   const [added, setAdded] = useState(false);
   const [toast, setToast] = useState<{
@@ -44,7 +41,7 @@ export function AddToCartButton({
     setToast(null);
 
     try {
-      const result = await addProduct(productId, 1);
+      const result = await addProduct(product, 1);
       if (!result.ok) {
         setToast({
           message: result.message ?? "Produk belum berhasil ditambahkan.",
@@ -58,7 +55,7 @@ export function AddToCartButton({
         window.clearTimeout(addedTimeout.current);
       }
       addedTimeout.current = window.setTimeout(() => setAdded(false), 1_500);
-      setToast({ message: `${productName} ditambahkan`, success: true });
+      setToast({ message: `${product.name} ditambahkan`, success: true });
     } catch (error) {
       console.error("Produk belum berhasil ditambahkan ke keranjang.", error);
       setToast({
@@ -75,12 +72,12 @@ export function AddToCartButton({
       <button
         type="button"
         onClick={() => void handleAdd()}
-        disabled={stock === 0 || !isReady || pending}
+        disabled={product.stock === 0 || !isCountReady || pending}
         className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
       >
-        {stock === 0 ? (
+        {product.stock === 0 ? (
           "Stok habis"
-        ) : pending || !isReady ? (
+        ) : pending || !isCountReady ? (
           <>
             <LoaderCircle
               className="h-4 w-4 animate-spin motion-reduce:animate-none"

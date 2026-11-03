@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { angka, rupiah } from "@/lib/format";
-import { useCart } from "./CartProvider";
+import { useCartItems, useCartHeader } from "./CartProvider";
 
 export function CartSummary({
   compact = false,
@@ -11,8 +11,8 @@ export function CartSummary({
   compact?: boolean;
   onContinue?: () => void;
 }) {
-  const { items, subtotal, totalCo2eKg, totalPlasticAvoidedG, itemCount } =
-    useCart();
+  const { items, subtotal, totalCo2eKg, totalPlasticAvoidedG } = useCartItems();
+  const { itemCount } = useCartHeader();
   const pricesAvailable = items.every((item) => item.product !== null);
   const canCheckout =
     pricesAvailable &&

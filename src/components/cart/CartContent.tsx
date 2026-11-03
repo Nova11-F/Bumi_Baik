@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { CartSummary } from "@/components/cart/CartSummary";
-import { useCart } from "@/components/cart/CartProvider";
+import { useCartItems, useCartDrawer } from "@/components/cart/CartProvider";
 
 export function CartContent() {
-  const { items, isReady, notice } = useCart();
+  const { items, isReady } = useCartItems();
+  const { notice } = useCartDrawer();
 
   if (!isReady) {
     return (

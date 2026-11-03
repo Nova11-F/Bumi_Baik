@@ -18,6 +18,18 @@ type SearchResponse = {
   products: ProductListItem[];
 };
 
+const suggestionCache = new Map<string, ProductListItem[]>();
+const MAX_SUGGESTION_CACHE = 30;
+
+function cacheSuggestions(query: string, products: ProductListItem[]) {
+  suggestionCache.delete(query);
+  suggestionCache.set(query, products);
+  if (suggestionCache.size > MAX_SUGGESTION_CACHE) {
+    const oldestQuery = suggestionCache.keys().next().value;
+    if (oldestQuery) suggestionCache.delete(oldestQuery);
+  }
+}
+
 export function SearchBox({
   variant = "desktop",
   autoFocus = false,
@@ -26,6 +38,7 @@ export function SearchBox({
   const router = useRouter();
   const listId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const requestSequence = useRef(0);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductListItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -35,11 +48,23 @@ export function SearchBox({
   const trimmedQuery = query.trim();
 
   useEffect(() => {
+    const requestId = ++requestSequence.current;
+    const cacheKey = trimmedQuery.toLocaleLowerCase("id-ID");
     if (trimmedQuery.length < 2) {
       setResults([]);
       setLoading(false);
       setSearchError(false);
       setActiveIndex(-1);
+      return;
+    }
+
+    const cachedProducts = suggestionCache.get(cacheKey);
+    if (cachedProducts) {
+      setResults(cachedProducts);
+      setLoading(false);
+      setSearchError(false);
+      setActiveIndex(-1);
+      setOpen(true);
       return;
     }
 
@@ -59,17 +84,32 @@ export function SearchBox({
         if (!response.ok) throw new Error("Pencarian gagal");
 
         const data = (await response.json()) as SearchResponse;
+        if (
+          controller.signal.aborted ||
+          requestSequence.current !== requestId
+        ) {
+          return;
+        }
+        cacheSuggestions(cacheKey, data.products);
         setResults(data.products);
         setSearchError(false);
         setActiveIndex(-1);
         setOpen(true);
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        if (
+          requestSequence.current === requestId &&
+          !(error instanceof DOMException && error.name === "AbortError")
+        ) {
           setResults([]);
           setSearchError(true);
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (
+          !controller.signal.aborted &&
+          requestSequence.current === requestId
+        ) {
+          setLoading(false);
+        }
       }
     }, 300);
 

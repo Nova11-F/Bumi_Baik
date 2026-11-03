@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Link from "next/link";
 import { co2e as formatCo2e, rupiah } from "@/lib/format";
 import { getStockStatus } from "@/lib/stock";
@@ -9,10 +10,15 @@ type ProductCardProps = {
   priority?: boolean;
 };
 
-export function ProductCard({ product, priority = false }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({
+  product,
+  priority = false,
+}: ProductCardProps) {
   const categoryName = product.categories?.name ?? "Produk";
   const sdgLabel =
-    product.sdg_goals.length > 0 ? ` · SDG ${product.sdg_goals.join(", ")}` : "";
+    product.sdg_goals.length > 0
+      ? ` · SDG ${product.sdg_goals.join(", ")}`
+      : "";
   const stockStatus = getStockStatus(product.stock);
 
   return (
@@ -42,18 +48,22 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           <h3 className="mt-1 line-clamp-2 min-h-14 font-display text-xl leading-snug text-forest-900">
             {product.name}
           </h3>
-          <p className="mt-2 text-base font-semibold text-ink-900">{rupiah(product.price_idr)}</p>
+          <p className="mt-2 text-base font-semibold text-ink-900">
+            {rupiah(product.price_idr)}
+          </p>
 
           <div className="mt-2 flex min-h-12 flex-wrap content-start items-center gap-2">
             <span className="rounded-sm bg-forest-100 px-2 py-0.5 font-mono text-sm text-forest-900">
               {formatCo2e(product.co2e_avoided_kg)}
             </span>
             {stockStatus === "menipis" && (
-              <span className="text-sm font-medium text-warning">Stok menipis</span>
+              <span className="text-sm font-medium text-warning">
+                Stok menipis
+              </span>
             )}
           </div>
         </div>
       </article>
     </Link>
   );
-}
+});

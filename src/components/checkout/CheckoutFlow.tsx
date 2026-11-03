@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { PaymentMethodStep } from "@/components/checkout/PaymentMethodStep";
 import { FREE_SHIPPING_MIN_IDR } from "@/lib/constants";
 import { addressSchema } from "@/lib/validators/account";
@@ -538,9 +539,20 @@ export function CheckoutFlow({
                   type="button"
                   onClick={submitCheckout}
                   disabled={!canSubmit || submitting}
+                  aria-busy={submitting}
                   className="hidden min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600 lg:inline-flex"
                 >
-                  {submitting ? "Memproses pesanan..." : "Bayar sekarang"}
+                  {submitting ? (
+                    <>
+                      <LoaderCircle
+                        className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"
+                        aria-hidden="true"
+                      />
+                      Membuat pesanan...
+                    </>
+                  ) : (
+                    "Bayar sekarang"
+                  )}
                 </button>
               </div>
               <p className="mt-3 text-sm text-ink-600">
@@ -603,9 +615,20 @@ export function CheckoutFlow({
               type="button"
               onClick={submitCheckout}
               disabled={!canSubmit || submitting}
+              aria-busy={submitting}
               className="inline-flex min-h-11 items-center justify-center rounded-md bg-forest-700 px-6 font-medium text-paper-50 hover:bg-forest-900 disabled:cursor-not-allowed disabled:bg-paper-200 disabled:text-ink-600"
             >
-              {submitting ? "Memproses..." : "Bayar sekarang"}
+              {submitting ? (
+                <>
+                  <LoaderCircle
+                    className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  Membuat pesanan...
+                </>
+              ) : (
+                "Bayar sekarang"
+              )}
             </button>
           </div>
         </div>

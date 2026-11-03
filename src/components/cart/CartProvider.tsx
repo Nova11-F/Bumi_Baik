@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Context,
 } from "react";
+import { CircleAlert, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { z } from "zod";
 import {
@@ -39,7 +41,8 @@ const hydrateResponseSchema = z.object({
   products: z.array(hydratedProductSchema),
 });
 
-type HydratedProduct = z.infer<typeof hydratedProductSchema>;
+export type CartProductSnapshot = z.infer<typeof hydratedProductSchema>;
+type HydratedProduct = CartProductSnapshot;
 
 export type CartDisplayItem = CartQuantity & {
   product: HydratedProduct | null;
@@ -63,7 +66,7 @@ type CartContextValue = {
   notice: string | null;
   setDrawerOpen: (open: boolean) => void;
   addProduct: (
-    productId: string,
+    product: CartProductSnapshot,
     quantity: number,
   ) => Promise<CartOperationResult>;
   changeQuantity: (
@@ -73,7 +76,32 @@ type CartContextValue = {
   deleteItem: (productId: string) => Promise<CartOperationResult>;
 };
 
-const CartContext = createContext<CartContextValue | null>(null);
+type CartItemsValue = Pick<
+  CartContextValue,
+  | "items"
+  | "subtotal"
+  | "totalCo2eKg"
+  | "totalPlasticAvoidedG"
+  | "isReady"
+  | "isSignedIn"
+>;
+type CartHeaderValue = Pick<
+  CartContextValue,
+  "itemCount" | "isCountReady" | "setDrawerOpen"
+>;
+type CartDrawerValue = Pick<
+  CartContextValue,
+  "isDrawerOpen" | "notice" | "setDrawerOpen"
+>;
+type CartActionsValue = Pick<
+  CartContextValue,
+  "addProduct" | "changeQuantity" | "deleteItem"
+>;
+
+const CartItemsContext = createContext<CartItemsValue | null>(null);
+const CartHeaderContext = createContext<CartHeaderValue | null>(null);
+const CartDrawerContext = createContext<CartDrawerValue | null>(null);
+const CartActionsContext = createContext<CartActionsValue | null>(null);
 
 const pendingMerges = new Map<string, Promise<CartActionResult>>();
 
@@ -112,12 +140,55 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const [userId, setUserId] = useState<string | null>(null);
   const [accountItems, setAccountItems] = useState<CartQuantity[]>([]);
+  const accountItemsRef = useRef(accountItems);
+  accountItemsRef.current = accountItems;
   const [authReady, setAuthReady] = useState(false);
   const [products, setProducts] = useState<Record<string, HydratedProduct>>({});
   const [hydrated, setHydrated] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cartToast, setCartToast] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [hydrateRevision, setHydrateRevision] = useState(0);
+  const quantityTimers = useRef(new Map<string, number>());
+  const quantitySnapshots = useRef(new Map<string, CartQuantity | null>());
+  const mutationVersions = useRef(new Map<string, number>());
+
+  const updateAccountItems = useCallback(
+    (update: (items: CartQuantity[]) => CartQuantity[]) => {
+      const nextItems = update(accountItemsRef.current);
+      accountItemsRef.current = nextItems;
+      setAccountItems(nextItems);
+    },
+    [],
+  );
+
+  const nextMutationVersion = useCallback((productId: string) => {
+    const version = (mutationVersions.current.get(productId) ?? 0) + 1;
+    mutationVersions.current.set(productId, version);
+    return version;
+  }, []);
+
+  const setAccountItem = useCallback(
+    (productId: string, item: CartQuantity | null) => {
+      updateAccountItems((items) => {
+        const remaining = items.filter(
+          (current) => current.productId !== productId,
+        );
+        return item ? [...remaining, item] : remaining;
+      });
+    },
+    [updateAccountItems],
+  );
+
+  const showCartToast = useCallback((message: string) => {
+    setCartToast(message);
+  }, []);
+
+  useEffect(() => {
+    if (!cartToast) return;
+    const timer = window.setTimeout(() => setCartToast(null), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [cartToast]);
 
   const setDrawerOpen = useCallback((open: boolean) => {
     setIsDrawerOpen(open);
@@ -145,7 +216,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (!nextUserId) {
         setUserId(null);
-        setAccountItems([]);
+        updateAccountItems(() => []);
         setNotice(null);
         setAuthReady(true);
         return;
@@ -170,7 +241,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!active || currentRequestId !== requestId) return;
       if (result.ok) {
         if (localItems.length) useGuestCartStore.getState().clear();
-        setAccountItems(result.items);
+        updateAccountItems(() => result.items);
         setNotice(cartNotice(result));
       } else {
         setNotice(result.message);
@@ -201,7 +272,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       active = false;
       subscription.unsubscribe();
     };
-  }, [guestHydrated, pathname]);
+  }, [guestHydrated, pathname, updateAccountItems]);
 
   const activeItems = userId ? accountItems : guestItems;
   const productIdsKey = activeItems.map((item) => item.productId).join(",");
@@ -217,8 +288,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     let active = true;
-    setHydrated(false);
-
     async function hydrateProducts() {
       try {
         const response = await fetch("/api/cart/hydrate", {
@@ -281,106 +350,121 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0,
   );
 
-  const applyActionResult = useCallback((result: CartActionResult) => {
-    if (!result.ok) {
-      setNotice(result.message);
-      return { ok: false, message: result.message };
-    }
-
-    setAccountItems(result.items);
-    setNotice(cartNotice(result));
-    return { ok: true, message: cartNotice(result) ?? undefined };
-  }, []);
-
   const addProduct = useCallback(
-    async (productId: string, quantity: number) => {
+    async (product: CartProductSnapshot, quantity: number) => {
       if (!authReady) {
         return { ok: false, message: "Keranjang sedang disiapkan. Coba lagi." };
       }
-      if (userId) {
-        try {
-          const actionResult = await addToCart({ productId, quantity });
-          const result = applyActionResult(actionResult);
-          if (
-            result.ok &&
-            actionResult.ok &&
-            actionResult.adjustedProductIds?.includes(productId)
-          ) {
-            return {
-              ok: false,
-              message:
-                "Stok tidak cukup. Jumlah di keranjang disesuaikan dengan stok terbaru.",
-            };
-          }
-          return result;
-        } catch {
-          const message = "Produk belum berhasil ditambahkan ke keranjang.";
-          setNotice(message);
-          return { ok: false, message };
-        }
-      }
-
-      let latestProduct: HydratedProduct | undefined;
-      try {
-        const response = await fetch("/api/cart/hydrate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productIds: [productId] }),
-        });
-        const body: unknown = await response.json();
-        const parsed = hydrateResponseSchema.safeParse(body);
-
-        if (!response.ok || !parsed.success) {
-          throw new Error("Produk belum berhasil dimuat.");
-        }
-
-        latestProduct = parsed.data.products[0];
-      } catch {
-        const message = "Stok terbaru belum berhasil dimuat. Coba lagi.";
-        setNotice(message);
-        return { ok: false, message };
-      }
-
-      if (!latestProduct || latestProduct.stock < 1) {
-        const message = "Produk ini sedang tidak tersedia.";
-        setNotice(message);
-        return { ok: false, message };
-      }
-
-      setProducts((current) => ({ ...current, [productId]: latestProduct }));
-      const previous =
-        useGuestCartStore
-          .getState()
-          .items.find((item) => item.productId === productId)?.quantity ?? 0;
-      const next = Math.min(99, previous + quantity, latestProduct.stock);
-      if (next <= previous) {
+      const productId = product.id;
+      const existing = (
+        userId ? accountItemsRef.current : useGuestCartStore.getState().items
+      ).find((item) => item.productId === productId);
+      const previousQuantity = existing?.quantity ?? 0;
+      const nextQuantity = Math.min(
+        99,
+        previousQuantity + quantity,
+        product.stock,
+      );
+      if (nextQuantity <= previousQuantity) {
         const message =
           "Stok tidak cukup. Keranjang sudah mencapai jumlah yang tersedia.";
         setNotice(message);
         return { ok: false, message };
       }
 
-      useGuestCartStore
-        .getState()
-        .addItem(productId, quantity, latestProduct.stock);
-      const limitedByStock = next < previous + quantity;
+      setProducts((current) => ({ ...current, [productId]: product }));
+      if (userId) {
+        setAccountItem(productId, { productId, quantity: nextQuantity });
+      } else {
+        useGuestCartStore
+          .getState()
+          .addItem(productId, quantity, product.stock);
+      }
+
+      const limitedByStock = nextQuantity < previousQuantity + quantity;
       const message = limitedByStock
         ? "Stok tidak cukup. Jumlah di keranjang disesuaikan dengan stok terbaru."
         : "Produk ditambahkan ke keranjang.";
-      setNotice(message);
-      return { ok: !limitedByStock, message };
+      setNotice(limitedByStock ? message : null);
+
+      if (!userId) return { ok: !limitedByStock, message };
+
+      const version = nextMutationVersion(productId);
+      try {
+        const result = await addToCart({ productId, quantity });
+        if (!result.ok) {
+          if (mutationVersions.current.get(productId) === version) {
+            setAccountItem(productId, existing ?? null);
+            setNotice(result.message);
+          }
+          return { ok: false, message: result.message };
+        }
+
+        if (mutationVersions.current.get(productId) === version) {
+          setAccountItem(
+            productId,
+            result.items.find((item) => item.productId === productId) ?? null,
+          );
+          setNotice(cartNotice(result));
+        }
+
+        return result.adjustedProductIds?.includes(productId)
+          ? {
+              ok: false,
+              message:
+                "Stok tidak cukup. Jumlah di keranjang disesuaikan dengan stok terbaru.",
+            }
+          : { ok: true };
+      } catch (error) {
+        if (mutationVersions.current.get(productId) === version) {
+          setAccountItem(productId, existing ?? null);
+          setNotice("Produk belum berhasil ditambahkan ke keranjang.");
+        }
+        console.error("Produk belum berhasil ditambahkan ke keranjang.", error);
+        return {
+          ok: false,
+          message: "Produk belum berhasil ditambahkan ke keranjang.",
+        };
+      }
     },
-    [applyActionResult, authReady, userId],
+    [authReady, nextMutationVersion, setAccountItem, userId],
   );
 
   const deleteItem = useCallback(
     async (productId: string): Promise<CartOperationResult> => {
       if (userId) {
+        const existing =
+          accountItemsRef.current.find(
+            (item) => item.productId === productId,
+          ) ?? null;
+        const version = nextMutationVersion(productId);
+        const timer = quantityTimers.current.get(productId);
+        if (timer !== undefined) {
+          window.clearTimeout(timer);
+          quantityTimers.current.delete(productId);
+          quantitySnapshots.current.delete(productId);
+        }
+        setAccountItem(productId, null);
         try {
-          return applyActionResult(await removeItem({ productId }));
-        } catch {
+          const result = await removeItem({ productId });
+          if (!result.ok) {
+            if (mutationVersions.current.get(productId) === version) {
+              setAccountItem(productId, existing);
+              setNotice(result.message);
+              showCartToast(result.message);
+            }
+            return { ok: false, message: result.message };
+          }
+          setNotice(null);
+          return { ok: true };
+        } catch (error) {
+          if (mutationVersions.current.get(productId) === version) {
+            setAccountItem(productId, existing);
+          }
           const message = "Produk belum berhasil dihapus dari keranjang.";
           setNotice(message);
+          showCartToast(message);
+          console.error(message, error);
           return { ok: false, message };
         }
       }
@@ -389,22 +473,78 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setNotice("Produk dihapus dari keranjang.");
       return { ok: true };
     },
-    [applyActionResult, userId],
+    [nextMutationVersion, setAccountItem, showCartToast, userId],
   );
 
   const changeQuantity = useCallback(
     async (productId: string, quantity: number) => {
       if (quantity < 1) return deleteItem(productId);
       if (userId) {
-        try {
-          return applyActionResult(
-            await updateQuantity({ productId, quantity }),
-          );
-        } catch {
-          const message = "Jumlah produk belum berhasil diperbarui.";
+        const product = products[productId];
+        if (!product || product.stock < 1) {
+          const message = "Stok produk habis. Hapus produk dari keranjang.";
           setNotice(message);
           return { ok: false, message };
         }
+
+        const current =
+          accountItemsRef.current.find(
+            (item) => item.productId === productId,
+          ) ?? null;
+        if (!quantitySnapshots.current.has(productId)) {
+          quantitySnapshots.current.set(productId, current);
+        }
+
+        const clampedQuantity = Math.min(quantity, product.stock, 99);
+        setAccountItem(productId, { productId, quantity: clampedQuantity });
+        const version = nextMutationVersion(productId);
+        const existingTimer = quantityTimers.current.get(productId);
+        if (existingTimer !== undefined) window.clearTimeout(existingTimer);
+
+        const timer = window.setTimeout(async () => {
+          quantityTimers.current.delete(productId);
+          try {
+            const result = await updateQuantity({
+              productId,
+              quantity: clampedQuantity,
+            });
+            if (mutationVersions.current.get(productId) !== version) return;
+            if (!result.ok) {
+              setAccountItem(
+                productId,
+                quantitySnapshots.current.get(productId) ?? null,
+              );
+              setNotice(result.message);
+              showCartToast(result.message);
+              return;
+            }
+            setAccountItem(
+              productId,
+              result.items.find((item) => item.productId === productId) ?? null,
+            );
+            setNotice(
+              result.adjustedProductIds?.includes(productId)
+                ? "Jumlah disesuaikan dengan stok terbaru."
+                : null,
+            );
+          } catch (error) {
+            if (mutationVersions.current.get(productId) === version) {
+              setAccountItem(
+                productId,
+                quantitySnapshots.current.get(productId) ?? null,
+              );
+              setNotice("Jumlah produk belum berhasil diperbarui.");
+              showCartToast("Jumlah produk belum berhasil diperbarui.");
+            }
+            console.error("Jumlah produk belum berhasil diperbarui.", error);
+          } finally {
+            if (mutationVersions.current.get(productId) === version) {
+              quantitySnapshots.current.delete(productId);
+            }
+          }
+        }, 300);
+        quantityTimers.current.set(productId, timer);
+        return { ok: true };
       }
 
       const product = products[productId];
@@ -425,29 +565,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setNotice(null);
       return { ok: true };
     },
-    [applyActionResult, deleteItem, products, userId],
+    [
+      deleteItem,
+      nextMutationVersion,
+      products,
+      setAccountItem,
+      showCartToast,
+      userId,
+    ],
   );
 
-  const value = useMemo<CartContextValue>(
+  const itemsValue = useMemo<CartItemsValue>(
     () => ({
       items,
-      itemCount,
       subtotal,
       totalCo2eKg,
       totalPlasticAvoidedG,
       isReady: authReady && guestHydrated && hydrated,
-      isCountReady: authReady && guestHydrated,
       isSignedIn: Boolean(userId),
-      isDrawerOpen,
-      notice,
-      setDrawerOpen,
-      addProduct,
-      changeQuantity,
-      deleteItem,
     }),
     [
       items,
-      itemCount,
       subtotal,
       totalCo2eKg,
       totalPlasticAvoidedG,
@@ -455,22 +593,107 @@ export function CartProvider({ children }: { children: ReactNode }) {
       guestHydrated,
       hydrated,
       userId,
-      isDrawerOpen,
-      notice,
-      addProduct,
-      changeQuantity,
-      deleteItem,
-      setDrawerOpen,
     ],
   );
+  const headerValue = useMemo<CartHeaderValue>(
+    () => ({
+      itemCount,
+      isCountReady: authReady && guestHydrated,
+      setDrawerOpen,
+    }),
+    [itemCount, authReady, guestHydrated, setDrawerOpen],
+  );
+  const drawerValue = useMemo<CartDrawerValue>(
+    () => ({ isDrawerOpen, notice, setDrawerOpen }),
+    [isDrawerOpen, notice, setDrawerOpen],
+  );
+  const actionsValue = useMemo<CartActionsValue>(
+    () => ({ addProduct, changeQuantity, deleteItem }),
+    [addProduct, changeQuantity, deleteItem],
+  );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  useEffect(
+    () => () => {
+      quantityTimers.current.forEach((timer) => window.clearTimeout(timer));
+      quantityTimers.current.clear();
+    },
+    [],
+  );
+
+  return (
+    <CartItemsContext.Provider value={itemsValue}>
+      <CartHeaderContext.Provider value={headerValue}>
+        <CartDrawerContext.Provider value={drawerValue}>
+          <CartActionsContext.Provider value={actionsValue}>
+            {children}
+            {cartToast && (
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="fixed inset-x-4 top-20 z-[60] rounded-md border border-danger bg-paper-50 p-4 text-danger sm:inset-x-auto sm:bottom-6 sm:right-6 sm:top-auto sm:w-96"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="flex min-w-0 items-start gap-2 text-sm font-medium">
+                    <CircleAlert
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    {cartToast}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCartToast(null)}
+                    aria-label="Tutup pemberitahuan"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-paper-100"
+                  >
+                    <X
+                      className="h-4 w-4"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+          </CartActionsContext.Provider>
+        </CartDrawerContext.Provider>
+      </CartHeaderContext.Provider>
+    </CartItemsContext.Provider>
+  );
+}
+
+function useRequiredContext<T>(context: Context<T | null>, name: string): T {
+  const value = useContext(context);
+  if (!value) {
+    throw new Error(`${name} harus digunakan di dalam CartProvider.`);
+  }
+  return value;
 }
 
 export function useCart(): CartContextValue {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart harus digunakan di dalam CartProvider.");
-  }
-  return context;
+  const items = useRequiredContext(CartItemsContext, "useCart");
+  return {
+    ...items,
+    ...useRequiredContext(CartHeaderContext, "useCart"),
+    ...useRequiredContext(CartDrawerContext, "useCart"),
+    ...useRequiredContext(CartActionsContext, "useCart"),
+  };
+}
+
+export function useCartItems(): CartItemsValue {
+  return useRequiredContext(CartItemsContext, "useCartItems");
+}
+
+export function useCartHeader(): CartHeaderValue {
+  return useRequiredContext(CartHeaderContext, "useCartHeader");
+}
+
+export function useCartDrawer(): CartDrawerValue {
+  return useRequiredContext(CartDrawerContext, "useCartDrawer");
+}
+
+export function useCartActions(): CartActionsValue {
+  return useRequiredContext(CartActionsContext, "useCartActions");
 }
