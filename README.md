@@ -1,254 +1,208 @@
-# 🌱 Bumi Baik
+<div align="center">
 
-### [Project Tagline]
+## 🌍 BUMI BAIK
 
-Bumi Baik is a web-based application developed to [describe the main purpose of the application and the problem it aims to solve].
+### *Sustainable Marketplace & Real-Time Impact Tracker*
 
-This project is built to provide [main solution or value] through a modern, responsive, and user-friendly web application.
+[![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![License](https://img.shields.io/badge/License-Educational-blue?style=for-the-badge)]()
 
----
+Platform e-commerce berkelanjutan yang membantu pengguna membeli produk ramah lingkungan sekaligus melacak dampak positif terhadap pelestarian bumi secara real-time.
 
-## 📌 Overview
+</div>
 
-**Bumi Baik** is a web application designed to [explain the main purpose of the project].
+# 📖 Tentang Proyek
 
-The application aims to [describe the problem or needs being addressed] by providing [describe the main solution].
+**Bumi Baik** merupakan platform *sustainable marketplace* berbasis web yang dibangun menggunakan **Next.js (App Router), TypeScript, Tailwind CSS, dan Supabase**.
 
-Developed using Next.js, React, TypeScript, and Supabase, this project combines modern frontend technologies with backend services to deliver a scalable and maintainable application.
+Platform ini memungkinkan pengguna untuk:
 
-## ✨ Features
+- 🛒 Menjelajahi dan membeli produk ramah lingkungan berbasis SDGs (*Sustainable Development Goals*).
+- 🔍 Mencari dan menyaring produk berdasarkan kategori keberlanjutan dan dampaknya.
+- 🧮 Mengelola keranjang belanja dan memproses *checkout* secara terintegrasi.
+- 💳 Melakukan pembayaran melalui integrasi **Paymenku** maupun lingkungan pengujian **Mock Pay**.
+- 📊 Memantau dampak akumulatif pengurangan jejak karbon dan kontribusi lingkungan secara transparan.
 
-The main features of Bumi Baik include:
+Proyek ini dibuat untuk menerapkan arsitektur web modern dengan prinsip **Server-Side Rendering (SSR)**, **Row Level Security (RLS)**, **Modular Component Design**, **State Management**, dan **Automated Cron Jobs**.
 
-- **[Feature 1]**
-  - [Description of the feature and its functionality].
+## ✨ Fitur Utama
 
-- **[Feature 2]**
-  - [Description of the feature and its functionality].
+**🛍️ Katalog & Filter Produk Berkelanjutan**
+- Menampilkan daftar produk ramah lingkungan dengan indikator tag dampak SDGs.
+- Filter tingkat lanjut berdasarkan kategori keberlanjutan.
+- Kolom pencarian produk berbasis API dengan respons instan.
 
-- **[Feature 3]**
-  - [Description of the feature and its functionality].
+**🧾 Keranjang Belanja & Checkout Interaktif**
+- Manajemen *cart* secara global dengan sinkronisasi state.
+- Perubahan kuantitas item dan penghitungan subtotal secara instan.
+- Alur *checkout* bertahap yang aman dari pemilihan alamat hingga opsi pengiriman.
 
-- **[Feature 4]**
-  - [Description of the feature and its functionality].
+**💳 Integrasi Pembayaran Multiple Gateway**
+- Integrasi *payment gateway* resmi menggunakan **Paymenku** (QRIS, Virtual Account, dll).
+- Tersedia halaman **Mock Pay** khusus untuk lingkungan simulasi/pengujian transaksi tanpa biaya.
+- *Webhook handler* otomatis untuk memperbarui status pesanan setelah pembayaran berhasil.
 
-> Replace the feature descriptions above with functionality that has been implemented in the application.
+**📊 Panel Pelacakan Dampak (Impact Tracker)**
+- Metrik khusus yang menampilkan estimasi kontribusi pengurangan karbon per produk.
+- Visualisasi pencapaian target SDGs untuk setiap transaksi pesanan.
 
-## 🛠️ Tech Stack
+**⚙️ Dashboard Administrator & Cron Tasks**
+- Pengelolaan daftar produk, stok, dan kategori oleh admin.
+- Pemantauan status transaksi dan Sinkronisasi Pembayaran (*Sync Payment*).
+- Fitur otomatisasi *Cron Job* (`expire-orders`) untuk membatalkan pesanan yang melewati batas waktu pembayaran secara berkala.
 
-Technologies and tools used in this project:
+## 🎬 Modul & Alur Transaksi
 
-| Technology | Description |
-|---|---|
-| Next.js 15 | React framework for building web applications |
-| React 19 | Library for building user interfaces |
-| TypeScript | Static typing for JavaScript |
-| Tailwind CSS 3 | Utility-first CSS framework |
-| Supabase | Backend services and database integration |
-| Zustand | Lightweight state management |
-| Zod | Schema validation |
-| Lucide React | Icon library |
-| Vitest | Unit testing framework |
-| ESLint | Code quality and linting |
-| Prettier | Code formatting |
+Bumi Baik menerapkan alur transaksi terintegrasi dari pemilihan produk hingga verifikasi pembayaran:
 
-## 📸 Preview
+| Tahapan | Komponen / API | Perilaku |
+| --- | --- | --- |
+| **Pencarian Produk** | `SearchBox` & `/api/search` | Memfilter dan menampilkan hasil pencarian produk ramah lingkungan. |
+| **Keranjang Belanja** | `CartDrawer` & `CartProvider` | Menyimpan dan memperbarui item belanjaan secara dinamis. |
+| **Checkout & Alamat** | `CheckoutFlow` & `AddressForm` | Memilih alamat pengiriman dan menghitung rinci biaya akhir. |
+| **Proses Pembayaran** | `paymenku.ts` / `mock.ts` | Menggenerasi transaksi pembayaran & mengarahkan ke gateway. |
+| **Verifikasi Webhook** | `/api/payments/paymenku/webhook` | Menerima callback pembayaran dan memperbarui status pesanan di database. |
+| **Otomatisasi Expire** | `/api/cron/expire-orders` | Membatalkan pesanan *pending* yang telah habis masa berlakunya. |
 
-Screenshots of the Bumi Baik application.
+## 🛠️ Teknologi yang Digunakan
 
-<!-- Replace the image paths with actual screenshots -->
+- **Next.js 15 (App Router)**: Framework React untuk rendering server-side dan API routes.
+- **TypeScript**: Kepastian tipe data secara ketat di seluruh lapisan aplikasi.
+- **Tailwind CSS**: Styling modern dengan pendekatan utility-first.
+- **Supabase**: PostgreSQL database, autentikasi user, dan Row Level Security (RLS).
+- **Zustand / Context API**: Manajemen state keranjang dan sesi pengguna.
+- **Vitest**: Unit testing untuk logika pembayaran, kalkulasi harga, dan validator.
 
-![Bumi Baik Preview](./docs/images/preview.png)
-
-<!-- Additional screenshots can be added below -->
-
-## 📁 Project Structure
+## 📁 Struktur Proyek
 
 ```text
-Bumi_Baik/
-│
-├── docs/                   # Project documentation
-│
-├── src/                    # Application source code
-│
-├── supabase/               # Supabase configuration and resources
-│
-├── .env.example            # Environment variable template
-├── .gitignore              # Git ignored files
-│
-├── eslint.config.mjs       # ESLint configuration
-├── next.config.ts          # Next.js configuration
-├── postcss.config.mjs      # PostCSS configuration
-├── tailwind.config.ts      # Tailwind CSS configuration
-├── tsconfig.json           # TypeScript configuration
-├── vitest.config.mts       # Vitest configuration
-│
-├── package.json            # Project dependencies and scripts
-├── package-lock.json       # Dependency lock file
-└── README.md               # Project documentation
+.
+├── docs/                      # Dokumentasi teknis (PRD, Arsitektur, Desain UI/UX)
+├── src/
+│   ├── app/                   # Next.js App Router (Halaman & API Routes)
+│   │   ├── (account)/         # Manajemen profil, alamat, & riwayat pesanan
+│   │   ├── (auth)/            # Autentikasi (Masuk, Daftar, Lupa Password)
+│   │   ├── admin/             # Dashboard administrasi toko & pesanan
+│   │   ├── api/               # Serverless API endpoints (Cart, Checkout, Webhook, Cron)
+│   │   ├── dampak/            # Halaman informasi pelacakan dampak lingkungan
+│   │   ├── mock-pay/          # Halaman simulasi pembayaran (Dev/UAT)
+│   │   └── produk/            # Katalog & halaman detail produk
+│   ├── components/            # Komponen UI modular (Cart, Catalog, Admin, Product, UI)
+│   ├── lib/                   # Utility helper, konfigurasi Supabase, & logika bisnis
+│   ├── stores/                # Global state management
+│   └── types/                 # Definisi Tipe TypeScript & Database Schema Enums
+├── supabase/                  # Skema SQL, migrasi database RLS, RPC, dan seed data
+└── public/                    # Aset gambar & statis aplikasi
 ```
 
-## 🚀 Getting Started
+## 💻 Cara Menjalankan Proyek
 
-Follow these instructions to run Bumi Baik locally.
+### 1. Prasyarat
 
-### Prerequisites
+Pastikan komputer Anda telah terpasang:
+- **Node.js** (v18.x atau lebih baru)
+- **npm** / **pnpm** / **yarn**
+- Akun **Supabase** (atau Supabase CLI lokal)
 
-Make sure you have installed:
-
-- Node.js
-- npm
-- Git
-- A Supabase project
-
-### Installation
-
-**1. Clone the repository**
+### 2. Instalasi Dependensi
 
 ```bash
 git clone https://github.com/Nova11-F/Bumi_Baik.git
-```
-
-**2. Navigate to the project directory**
-
-```bash
 cd Bumi_Baik
-```
-
-**3. Install dependencies**
-
-```bash
 npm install
 ```
 
-**4. Configure environment variables**
+### 3. Konfigurasi Environment Variables
 
-Create a `.env.local` file in the project root directory.
+Buat file `.env.local` berdasarkan file panduan `.env.example`:
 
-Copy the contents of `.env.example` into `.env.local` and configure the required values.
-
-```env
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-
-NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=false
-
-SUPABASE_SECRET_KEY=
-
-PAYMENT_PROVIDER=mock
-PAYMENKU_BASE_URL=https://paymenku.com/api/v1
-PAYMENKU_API_KEY=
-PAYMENKU_WEBHOOK_SECRET=
-
-CRON_SECRET=
+```bash
+cp .env.example .env.local
 ```
 
-> Important: Never expose secret keys or sensitive credentials in public repositories. Keep server-only environment variables private.
+Isi variabel berikut pada `.env.local`:
 
-**5. Run the development server**
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+PAYMENKU_API_KEY=your-paymenku-api-key
+PAYMENKU_MERCHANT_ID=your-merchant-id
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 4. Setup Database Supabase
+
+Eksekusi migrasi dan seed data ke database Supabase Anda:
+
+```bash
+npx supabase db reset
+```
+
+*Atau jalankan skrip SQL di folder `supabase/migrations/` dan `supabase/seed.sql` melalui SQL Editor Supabase.*
+
+### 5. Menjalankan Server Pengembang
 
 ```bash
 npm run dev
 ```
 
-**6. Open the application**
+Buka browser dan akses alamat `http://localhost:3000`.
 
-Visit the following URL in your browser:
+## 🔄 Status Transaksi & Pembayaran
 
-```text
-http://localhost:3000
-```
+| Status Pesanan | Kondisi Trigger | Tindakan Sistem |
+| --- | --- | --- |
+| **`pending`** | Pesanan baru saja dibuat | Menunggu konfirmasi pembayaran dari gateway |
+| **`paid`** | Webhook menerima konfirmasi | Mengubah status pesanan menjadi lunas & menyesuaikan stok |
+| **`cancelled`** | Dibatalkan user / Kadaluarsa | Stok produk dikembalikan & pesanan ditutup |
+| **`expired`** | Waktu bayar habis (via Cron) | Mengubah status pesanan menjadi kadaluarsa |
 
-## ⚙️ Available Scripts
+## ⚙️ Penjelasan Fungsi & Logika Utama
 
-The following scripts are available in `package.json`:
+- **`apply-event.ts` (`src/lib/server/payments/`)**:
+  Memproses event status pembayaran dari webhook gateway dan memperbarui database secara transaksional.
+- **`paymenku.ts` (`src/lib/server/payments/`)**:
+  Integrasi API Paymenku untuk membuat invoice, mengecek status transaksi, dan memverifikasi signature webhook.
+- **`catalog-query.ts` (`src/lib/`)**:
+  Memproses kueri pencarian, penyaringan kriteria dampak lingkungan, dan pengurutan produk.
+- **`cart.ts` (`src/stores/`)**:
+  Manajemen *state* keranjang belanja lokal dengan persisted storage dan sinkronisasi ke server.
+- **`expire-orders/route.ts` (`src/app/api/cron/`)**:
+  Endpoint otomatis untuk memeriksa dan meng-expire pesanan yang belum dibayar dalam batas waktu tertentu.
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the development server |
-| `npm run build` | Build the application for production |
-| `npm run start` | Start the production server |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Check TypeScript types |
-| `npm run test` | Run tests using Vitest |
-| `npm run format` | Format code using Prettier |
+# 🎯 Tujuan Proyek
 
-## 🧪 Testing
+Proyek ini dibuat untuk menghadirkan solusi belanja ramah lingkungan sekaligus penerapan praktis dalam:
 
-This project uses Vitest as its testing framework.
+- Pengembangan web modern berbasis Next.js App Router dan Server Components.
+- Keamanan akses data menggunakan **Supabase Row Level Security (RLS)**.
+- Integrasi sistem pembayaran terotomatisasi (*Real & Mock Payment Gateways*).
+- Pembuatan pengujian otomatis (Unit Testing) dengan Vitest.
+- Perancangan UI/UX yang responsif dan berfokus pada produk berkelanjutan.
 
-To execute the test suite, run:
+# 🚀 Rencana Pengembangan
 
-```bash
-npm run test
-```
+Fitur yang direncanakan untuk tahap pengembangan berikutnya:
 
-To check TypeScript errors:
+- 🌳 **Kalkulator Jejak Karbon**: Fitur otomatis untuk menghitung total offset emisi dari seluruh belanjaan.
+- 📦 **Integrasi Pengiriman Lanjutan**: Lacak posisi paket secara real-time dari penyedia kurir lokal.
+- 🏆 **Sistem Gamifikasi & Reward**: Poin penghargaan ramah lingkungan (*Eco-Points*) untuk setiap pembelian.
+- 📱 **Mobile App Version**: Pengembangan aplikasi seluler menggunakan React Native.
 
-```bash
-npm run typecheck
-```
+## 📜 Lisensi
 
-To check code quality:
+Proyek ini dikembangkan untuk mendukung konsumsi berkelanjutan dan pelestarian lingkungan. Silakan kembangkan dan manfaatkan sesuai kebutuhan.
 
-```bash
-npm run lint
-```
+<div align="center">
 
-## 🗺️ Roadmap
+### ⭐ Jangan lupa berikan Star jika proyek ini bermanfaat!
 
-Planned improvements and future development:
+Created by [Nova11-F](https://github.com/Nova11-F)
 
-- [ ] Complete core application functionality.
-- [ ] Improve user interface and user experience.
-- [ ] Expand application features.
-- [ ] Improve application performance.
-- [ ] Add comprehensive test coverage.
-- [ ] Optimize production deployment.
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome.
-
-If you would like to contribute:
-
-1. Fork this repository.
-2. Create a new branch:
-
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-3. Commit your changes:
-
-   ```bash
-   git commit -m "feat: add new feature"
-   ```
-
-4. Push your branch:
-
-   ```bash
-   git push origin feature/your-feature
-   ```
-
-5. Open a Pull Request.
-
-## 📄 License
-
-This project is currently provided for development and educational purposes.
-
-License information can be added here once the project's license has been established.
-
-## 👨‍💻 Author
-
-**Nova11-F**
-
-- GitHub: [@Nova11-F](https://github.com/Nova11-F)
-
----
-
-<p align="center">
-  Developed with ❤️ by <a href="https://github.com/Nova11-F">Nova11-F</a>
-</p>
+</div>
